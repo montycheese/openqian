@@ -129,6 +129,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
             points={chart.points}
             range={range}
             hrefFor={(r) => rangeHref(`/accounts/${account.id}`, {}, r)}
+            step={account.kind === "value"}
             invert={isDebt}
           />
         )}

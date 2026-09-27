@@ -12,12 +12,14 @@ type Props = {
   currency: string;
   /** Screen-reader summary of the trend. */
   summary: string;
+  /** Draw steps: the value holds until the next point (manual valuations). */
+  step?: boolean;
 };
 
 const tick = { fill: "var(--muted)", fontSize: 12 };
 
 /** Single-series area chart of a value over time. Needs at least two points. */
-export function HistoryChart({ points, currency, summary }: Props) {
+export function HistoryChart({ points, currency, summary, step }: Props) {
   const hidden = usePrivateMode();
   const data = points.map((p) => ({ t: toTime(p.date), value: p.value }));
   const { ticks, format } = dateTicks(data[0].t, data[data.length - 1].t);
@@ -27,7 +29,7 @@ export function HistoryChart({ points, currency, summary }: Props) {
   );
 
   return (
-    <figure className="h-48 w-full sm:h-56 [&_path]:[shape-rendering:crispEdges]" aria-label={hidden ? "Value over time (amounts hidden in private mode)" : summary}>
+    <figure className={`h-48 w-full sm:h-56 ${step ? "[&_path]:[shape-rendering:crispEdges]" : ""}`} aria-label={hidden ? "Value over time (amounts hidden in private mode)" : summary}>
       <AreaChart
         responsive
         data={data}
@@ -67,8 +69,7 @@ export function HistoryChart({ points, currency, summary }: Props) {
         />
         <Area
           dataKey="value"
-          // Always stepped: a pixel line, like an old game's graph.
-          type="stepAfter"
+          type={step ? "stepAfter" : "monotone"}
           // Ink brush stroke on paper; the active point is a red seal dot.
           stroke="var(--ink)"
           strokeWidth={3}
