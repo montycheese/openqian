@@ -1,0 +1,1 @@
+ALTER TABLE `snapshots` ADD `partial` integer DEFAULT false NOT NULL;

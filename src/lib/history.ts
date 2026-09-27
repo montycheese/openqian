@@ -36,14 +36,14 @@ function factorTo(target: string, snapshot: { baseCurrency: string; fxRates: str
 /**
  * Daily net worth in `baseCurrency`, oldest first. Snapshots taken in another
  * base currency are converted with their stored rates, or skipped when they
- * have no rate for `baseCurrency`.
+ * have no rate for `baseCurrency`. Partial (backfilled) days are left out.
  */
 export function getNetWorthHistory(db: DB, opts: { range: HistoryRange; baseCurrency: string }): NetWorthPoint[] {
   const start = rangeStart(opts.range);
   const rows = db
     .select()
     .from(snapshots)
-    .where(start ? gte(snapshots.date, start) : undefined)
+    .where(and(eq(snapshots.partial, false), start ? gte(snapshots.date, start) : undefined))
     .orderBy(asc(snapshots.date))
     .all();
   return rows.flatMap((s) => {

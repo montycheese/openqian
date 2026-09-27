@@ -191,6 +191,12 @@ export const snapshots = sqliteTable("snapshots", {
   netWorth: real("net_worth").notNull(),
   /** JSON map of currency → base units per 1 unit, as used for this snapshot. */
   fxRates: text("fx_rates").notNull().default("{}"),
+  /**
+   * True for days reconstructed from valuation history that are missing some
+   * accounts (e.g. holdings, which keep no history), so the totals understate
+   * net worth. Only per-account history uses these.
+   */
+  partial: integer("partial", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

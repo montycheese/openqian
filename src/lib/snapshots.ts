@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq, lt, min } from "drizzle-orm";
 import { getDb, type DB } from "@/lib/db";
 import {
   accounts,
@@ -26,7 +26,7 @@ export function localDate(d = new Date()): string {
 type Inputs = { categories: Category[]; accounts: Account[]; valuations: Valuation[]; holdings: Holding[] };
 
 /** Upserts the day's snapshot and replaces its per-account rows. */
-function writeSnapshot(db: DB, date: string, base: string, convert: Converter, inputs: Inputs): Snapshot {
+function writeSnapshot(db: DB, date: string, base: string, convert: Converter, inputs: Inputs, partial = false): Snapshot {
   const summary = summarizeNetWorth({ baseCurrency: base, ...inputs, convert, includeHidden: true });
 
   const used = new Set([
@@ -63,6 +63,7 @@ function writeSnapshot(db: DB, date: string, base: string, convert: Converter, i
     debts: summary.debts,
     netWorth: summary.netWorth,
     fxRates: JSON.stringify(fxRates),
+    partial,
   };
   return db.transaction((tx) => {
     const [row] = tx
@@ -97,12 +98,65 @@ export function takeSnapshot(db: DB, opts: { date?: string } = {}): Snapshot | n
 }
 
 /**
- * Captures today's snapshot after a change to values. Never throws: a failed
- * snapshot must not fail the user's action.
+ * Reconstructs snapshots for days before the first one, from valuation history,
+ * so charts aren't blank for data entered after the fact. Each valuation date
+ * gets a snapshot of the value accounts known by then. Holdings keep no history,
+ * so a day missing any account that has data today is marked `partial`, which
+ * keeps it out of net worth history while per-account history can still use it.
+ * Rates are today's (stored with each snapshot) since past rates aren't kept.
+ * Returns the number of days written.
+ */
+export function backfillSnapshots(db: DB, opts: { today?: string } = {}): number {
+  const today = opts.today ?? localDate();
+  const earliest = db.select({ date: min(snapshots.date) }).from(snapshots).get()?.date ?? null;
+  const cutoff = earliest && earliest < today ? earliest : today;
+  const dates = db
+    .selectDistinct({ date: valuations.date })
+    .from(valuations)
+    .where(lt(valuations.date, cutoff))
+    .orderBy(asc(valuations.date))
+    .all()
+    .map((r) => r.date);
+  if (dates.length === 0) return 0;
+
+  const base = readBaseCurrency(db);
+  const convert = loadConverter(db, base);
+  const allCategories = db.select().from(categories).all();
+  const allAccounts = db.select().from(accounts).all();
+  const allValuations = db.select().from(valuations).all();
+  const hasData = new Set([
+    ...allValuations.map((v) => v.accountId),
+    ...db.selectDistinct({ id: holdings.accountId }).from(holdings).all().map((r) => r.id),
+  ]);
+
+  for (const date of dates) {
+    const known = allValuations.filter((v) => v.date <= date);
+    const valued = new Set(known.map((v) => v.accountId));
+    const included = allAccounts.filter((a) => a.kind === "value" && valued.has(a.id));
+    const partial = allAccounts.some(
+      (a) => !a.isHidden && !a.isExcluded && hasData.has(a.id) && !valued.has(a.id),
+    );
+    writeSnapshot(
+      db,
+      date,
+      base,
+      convert,
+      { categories: allCategories, accounts: included, valuations: known, holdings: [] },
+      partial,
+    );
+  }
+  return dates.length;
+}
+
+/**
+ * Captures today's snapshot after a change to values, and backfills earlier
+ * days if needed. Never throws: a failed snapshot must not fail the user's action.
  */
 export function recordSnapshot(): void {
   try {
-    takeSnapshot(getDb());
+    const db = getDb();
+    takeSnapshot(db);
+    backfillSnapshots(db);
   } catch (err) {
     console.error("Couldn't record net worth snapshot:", err);
   }

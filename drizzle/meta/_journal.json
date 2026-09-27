@@ -29,6 +29,13 @@
       "when": 1790528460927,
       "tag": "0003_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790528927151,
+      "tag": "0004_snapshot_partial",
+      "breakpoints": true
     }
   ]
 }

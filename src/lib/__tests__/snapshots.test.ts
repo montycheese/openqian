@@ -2,7 +2,8 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, type DB } from "@/lib/db";
 import { accounts, categories, fxRates, holdings, settings, snapshotAccounts, snapshots, valuations } from "@/lib/db/schema";
-import { localDate, recordSnapshot, takeSnapshot } from "@/lib/snapshots";
+import { getAccountHistory, getNetWorthHistory } from "@/lib/history";
+import { backfillSnapshots, localDate, recordSnapshot, takeSnapshot } from "@/lib/snapshots";
 
 process.env.OPENCHIENG_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
 
@@ -160,6 +161,64 @@ describe("takeSnapshot", () => {
     expect(rows[broker.id]).toMatchObject({ nativeValue: null, nativeCurrency: null, baseValue: 700 });
     expect(rows[empty.id]).toMatchObject({ nativeValue: 0, nativeCurrency: "EUR", baseValue: 0 });
     expect(JSON.parse(snap.fxRates)).toEqual({ EUR: 2 });
+  });
+});
+
+describe("backfillSnapshots", () => {
+  const all = () => db.select().from(snapshots).orderBy(snapshots.date).all();
+
+  it("rebuilds complete days from valuation history when there are only value accounts", () => {
+    const cash = account({ name: "Cash", category: "Cash" });
+    const loan = account({ name: "Loan", category: "Loans" });
+    value(cash.id, 100, "USD", "2026-01-01");
+    value(loan.id, 40, "USD", "2026-01-01");
+    value(cash.id, 150, "USD", "2026-02-01");
+    value(cash.id, 999, "USD", "2026-09-27"); // today: left to takeSnapshot
+
+    expect(backfillSnapshots(db, { today: "2026-09-27" })).toBe(2);
+    expect(all().map((s) => [s.date, s.netWorth, s.partial])).toEqual([
+      ["2026-01-01", 60, false],
+      ["2026-02-01", 110, false],
+    ]);
+    expect(getNetWorthHistory(db, { range: "all", baseCurrency: "USD" }).map((p) => p.netWorth)).toEqual([60, 110]);
+  });
+
+  it("marks days missing holdings or not-yet-valued accounts as partial", () => {
+    const house = account({ name: "House", category: "Real Estate" });
+    const cash = account({ name: "Cash", category: "Cash" });
+    const broker = account({ name: "Broker", category: "Investments", kind: "holdings" });
+    account({ name: "Hidden", category: "Cash", isHidden: true, kind: "holdings" });
+    db.insert(holdings).values({ accountId: broker.id, name: "VOO", marketValue: 500, currency: "USD" }).run();
+    value(house.id, 300_000, "USD", "2020-01-01");
+    value(cash.id, 50, "USD", "2026-09-01");
+
+    takeSnapshot(db, { date: "2026-09-10" });
+    expect(backfillSnapshots(db, { today: "2026-09-27" })).toBe(2);
+    const [first, second] = all();
+    expect(first).toMatchObject({ date: "2020-01-01", partial: true, netWorth: 300_000 });
+    expect(rowsOf(first.id).map((r) => r.accountId)).toEqual([house.id]);
+    expect(second).toMatchObject({ date: "2026-09-01", partial: true, netWorth: 300_050 });
+
+    // Net worth history skips partial days; the house's own history keeps them.
+    expect(getNetWorthHistory(db, { range: "all", baseCurrency: "USD" }).map((p) => p.date)).toEqual(["2026-09-10"]);
+    expect(getAccountHistory(db, house.id, { range: "all", baseCurrency: "USD" }).map((p) => p.date)).toEqual([
+      "2020-01-01",
+      "2026-09-01",
+      "2026-09-10",
+    ]);
+  });
+
+  it("only fills days before the earliest snapshot", () => {
+    const cash = account({ name: "Cash", category: "Cash" });
+    value(cash.id, 1, "USD", "2026-03-01");
+    takeSnapshot(db, { date: "2026-02-01" });
+    value(cash.id, 2, "USD", "2026-01-15");
+    expect(backfillSnapshots(db, { today: "2026-09-27" })).toBe(1);
+    expect(all().map((s) => [s.date, s.netWorth])).toEqual([
+      ["2026-01-15", 2],
+      ["2026-02-01", 1],
+    ]);
+    expect(backfillSnapshots(db, { today: "2026-09-27" })).toBe(0);
   });
 });
 
