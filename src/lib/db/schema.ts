@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text, index } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const id = () =>
   text("id")
@@ -142,6 +142,44 @@ export const imports = sqliteTable("imports", {
   createdAt: createdAt(),
 });
 
+/** Cached quotes from price feeds, one per symbol per day per source. */
+export const prices = sqliteTable(
+  "prices",
+  {
+    id: id(),
+    /** Ticker as stored on holdings (e.g. "VOO", "BTC"). */
+    symbol: text("symbol").notNull(),
+    kind: text("kind", { enum: ["security", "crypto"] }).notNull(),
+    /** YYYY-MM-DD of the quote. */
+    date: text("date").notNull(),
+    price: real("price").notNull(),
+    currency: text("currency").notNull(),
+    source: text("source").notNull(),
+    fetchedAt: integer("fetched_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [uniqueIndex("prices_symbol_kind_date_source_idx").on(t.symbol, t.kind, t.date, t.source)],
+);
+
+/** Exchange rates: 1 `base` = `rate` `quote`. Manual rows override fetched ones. */
+export const fxRates = sqliteTable(
+  "fx_rates",
+  {
+    id: id(),
+    /** YYYY-MM-DD the rate applies to. */
+    date: text("date").notNull(),
+    base: text("base").notNull(),
+    quote: text("quote").notNull(),
+    rate: real("rate").notNull(),
+    source: text("source", { enum: ["frankfurter", "manual"] }).notNull(),
+    fetchedAt: integer("fetched_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [uniqueIndex("fx_rates_date_pair_source_idx").on(t.date, t.base, t.quote, t.source)],
+);
+
 export type Category = typeof categories.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Valuation = typeof valuations.$inferSelect;
@@ -149,3 +187,5 @@ export type Holding = typeof holdings.$inferSelect;
 export type HoldingType = (typeof holdingTypes)[number];
 export type Connection = typeof connections.$inferSelect;
 export type ExchangeId = (typeof exchanges)[number];
+export type Price = typeof prices.$inferSelect;
+export type FxRate = typeof fxRates.$inferSelect;
