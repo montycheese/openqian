@@ -38,7 +38,6 @@ OpenChieng is a self-hosted, view-only net worth and portfolio tracker (in the s
 ### Out of scope (for now)
 
 - Transactions, budgeting, spending analysis
-- On-chain wallet tracking (adapter interface should leave room for it later)
 - Bill pay, money movement, sharing / beneficiary features, mobile app
 - Any hosted / multi-user deployment
 
@@ -52,6 +51,7 @@ OpenChieng is a self-hosted, view-only net worth and portfolio tracker (in the s
 | **CSV / Excel import** | Brokerage positions, bank balances | None — user downloads file | `.csv`, `.xls`, `.xlsx`. Per-institution format profiles (Fidelity, Schwab, Robinhood, Morgan Stanley, Chase, Wells Fargo to start); easy community contributions. |
 | **Manual** | Anything | — | Market-priced (ticker + qty) or custom-valued. |
 | **Schwab Trader API** | Schwab positions and balances | User's own Schwab developer app (free) | Official, direct, no middleman. Requires app approval; refresh token expires ~every 7 days → re-login flow. Needs an HTTPS callback (`https://127.0.0.1` via mkcert). |
+| **Public blockchain endpoints** | Wallet balances (EVM, Solana, Bitcoin) | None (public address only) | See "On-chain wallets". |
 | **CCXT** | Crypto exchange balances | Read-only exchange API keys | Warn if a key appears to have trade/withdraw permissions. |
 | **Price feeds** | Quotes for tickers (manual and imported) and crypto | None by default | Pluggable; default `yahoo-finance2`, crypto via CoinGecko free tier. |
 | **FX rates** | Currency conversion | None (Frankfurter v2) | Blends central-bank reference rates (covers TWD etc.); manual override for anything missing. |
@@ -109,6 +109,20 @@ General importer rules:
 - Useful columns: `Name`, `Product Type`, `Symbol`, `CUSIP`, `Last ($)`, `As of`, `Quantity`, `Market Value ($)`, `Total Cost ($)`, `Adjusted Cost ($)`.
 - Cash sweep rows have `Product Type` = `Cash, MMF and BDP`, a non-ticker symbol, and no price/quantity → import as cash by market value.
 
+## On-chain wallets
+
+- **Watch-only:** only public addresses are stored; no keys or signing.
+- **Free, no keys, no hosted backend:** balances come from public endpoints (public EVM JSON-RPC nodes, Solana public RPC, mempool.space / Blockstream Esplora for Bitcoin), called from the local app server. Endpoints can be overridden per chain in Settings (e.g. a personal node). Privacy trade-off: endpoint providers see which addresses are queried.
+- **Extensible design** (`src/lib/wallets/`):
+  - `ChainAdapter` interface: `normalizeAddress`, `fetchBalances(address, { rpcUrls, fetch })`, default RPC URLs with fallback, CoinGecko platform id, explorer URL.
+  - EVM networks are config (`createEvmChain({ chainId, rpcs, native asset, curated tokens })`) — adding a network is a config entry.
+  - Solana and Bitcoin have their own adapters; registry in `chains/index.ts`; address format detection picks the family.
+- **Initial chains:** Ethereum, Base, Arbitrum (one 0x address tracked on any subset), Solana, Bitcoin.
+- **Tokens:** curated per-chain lists (avoids spam airdrops); unknown tokens are kept only if CoinGecko can price their contract.
+- **Pricing:** CoinGecko ids batched; contract lookups one at a time (free-tier limit), capped per refresh; stablecoins pegged at $1.
+- **Refresh:** part of "Refresh all"; holdings are replaced only when every chain was read, so a flaky endpoint never drops assets.
+- **Future:** more EVM chains, custom token contracts, Bitcoin xpub/descriptors, staked SOL, NFTs/DeFi positions (out of scope).
+
 ## Multi-currency design
 
 - Every account, holding, valuation, and price stores its **native currency**.
@@ -156,7 +170,8 @@ General importer rules:
 2. ✅ **File import** *(pulled forward)* — generic positions parser for CSV/XLSX (header detection, multi-account files, cash detection, total-row checksum), preview + account matching by account number. Verified on a real Morgan Stanley export; Fidelity/Schwab layouts covered by synthetic tests and still need real sample files.
 3. ✅ **Crypto exchanges** *(pulled forward)* — ccxt connections (Coinbase, Kraken, Gemini, Binance.US) with encrypted keys, Coinbase key-permission check (refuses trade/transfer keys), balances priced in USD from the exchange's own markets, per-connection and "refresh all".
 4. ✅ **Prices & FX** — Yahoo Finance (stocks/ETFs/funds) and CoinGecko (crypto) quotes cached in `prices`; manual and imported holdings are repriced on refresh (exchange-connected accounts use their exchange's prices). Frankfurter v2 FX rates with inverse/cross conversion and manual overrides in Settings. One "Refresh all" button runs connections → prices → FX.
-5. **Snapshots & history charts.**
+5. ✅ **Snapshots & history charts** — one snapshot per local day (latest capture wins) after every change, storing per-account values and the FX rates used; backfill from dated valuations (partial days flagged and left off the net worth chart); Recharts net worth and per-account charts with 1M–All ranges.
+5b. **On-chain wallets** *(added to scope)* — watch-only addresses read from free public endpoints (see "On-chain wallets" below).
 6. **Schwab Trader API adapter.**
 7. ✅ **OFX/QFX import** *(pulled forward)* — bank and credit card balances (SGML and XML OFX) into value accounts, brokerage positions from `INVPOSLIST`. Synthetic Chase/Wells Fargo-style fixtures; needs a real download to confirm.
 8. v2 features; optional aggregator adapters as community contributions.
