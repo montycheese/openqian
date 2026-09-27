@@ -53,3 +53,16 @@ export function stackColor(value: number, debt = false): string {
   if (debt) return "#ff5a4a";
   return value >= 1e7 ? "#00ff80" : value >= 1e5 ? "#ffffff" : "#ffff00";
 }
+
+/**
+ * Shorter name for an inventory slot: drops a leading institution ("Fidelity Roth IRA"
+ * → "Roth IRA") and a trailing account-number ending ("… …4173"), both of which the
+ * slot's tooltip still shows.
+ */
+export function slotName(name: string, institution: string | null): string {
+  let short = name.replace(/\s*[…·-]*\s*…\d{3,4}\s*$/, "").trim();
+  if (institution && short.toLowerCase().startsWith(institution.toLowerCase() + " ")) {
+    short = short.slice(institution.length).replace(/^[\s·:-]+/, "");
+  }
+  return short || name;
+}

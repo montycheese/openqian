@@ -218,14 +218,14 @@ export function Slot({
     <Link
       href={href}
       title={title}
-      className={`relative flex h-[88px] min-w-0 flex-col items-center justify-between border-2 bg-[#4a261a] px-1 pt-5 pb-1 hover:bg-[#5c3022] focus-visible:outline-2 focus-visible:outline-gold ${dimmed ? "opacity-55" : ""}`}
+      className={`relative flex h-[118px] min-w-0 flex-col items-center justify-between border-2 bg-[#4a261a] px-1 pt-5 pb-1 hover:bg-[#5c3022] focus-visible:outline-2 focus-visible:outline-gold ${dimmed ? "opacity-55" : ""}`}
       style={{ borderColor: "#1c0a06 #7a4a32 #7a4a32 #1c0a06", boxShadow: `inset 0 0 0 2px ${gradeColor}` }}
     >
       <span className="num absolute top-1 left-1.5 text-xs leading-none" style={{ color: stackColor, textShadow: "1px 1px 0 #000" }}>
         {stack}
       </span>
       <Sprite sprite={sprite} size={36} />
-      <span className="w-full truncate text-center text-sm leading-tight text-[#f1e4c2]">{name}</span>
+      <span className="line-clamp-3 w-full text-center text-[13px] leading-[1.15] break-words text-[#f1e4c2]">{name}</span>
     </Link>
   );
 }

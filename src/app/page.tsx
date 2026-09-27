@@ -9,7 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { Sensitive } from "@/components/sensitive";
 import { countSyncedSources, getNetWorth, getNetWorthSeries } from "@/lib/queries";
 import { CoinEmblem, GradeLegend, Ingot, MilestoneCoins, Slot, spriteForAccount } from "@/components/treasury";
-import { CATEGORY_ZH, gradeFor, nextMilestone, stackColor, stackLabel } from "@/lib/treasury";
+import { CATEGORY_ZH, gradeFor, nextMilestone, slotName, stackColor, stackLabel } from "@/lib/treasury";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
@@ -130,7 +130,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                       <li key={s.account.id} className="min-w-0">
                         <Slot
                           href={`/accounts/${s.account.id}`}
-                          name={s.account.name}
+                          name={slotName(s.account.name, s.account.institution)}
                           title={[
                             s.account.name,
                             s.account.institution,

@@ -68,3 +68,14 @@ describe("Chinese font subset", async () => {
     expect([...missing]).toEqual([]);
   });
 });
+
+describe("slotName", async () => {
+  const { slotName } = await import("@/lib/treasury");
+  it.each([
+    ["Fidelity Uniform Transfers to Minors (UTMA) …4173", "Fidelity", "Uniform Transfers to Minors (UTMA)"],
+    ["Morgan Stanley AAA …4533", "Morgan Stanley", "AAA"],
+    ["Checking", "Chase", "Checking"],
+    ["Fidelity", "Fidelity", "Fidelity"],
+    ["Hot wallet", null, "Hot wallet"],
+  ])("%s → %s", (name, inst, expected) => expect(slotName(name, inst)).toBe(expected));
+});
