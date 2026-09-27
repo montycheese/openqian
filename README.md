@@ -7,6 +7,14 @@ A private, self-hosted net worth and portfolio tracker. Think Kubera, but it run
 - **No middlemen.** No bank-aggregator logins (Plaid, SnapTrade, …). Data comes from files you download, read-only keys you create, public blockchain data, or what you type in.
 - **View-only.** It can't trade, transfer, or sign anything.
 
+<p align="center">
+  <img src="docs/screenshot-dashboard.png" alt="OpenQian dashboard: red-lacquer panels with gold trim on rice paper, a gold ingot above the net worth, milestone coins, a net worth chart drawn as an ink stroke, and accounts grouped into categories with Chinese labels" width="720">
+  <img src="docs/screenshot-phone.png" alt="OpenQian dashboard on a phone" width="200">
+</p>
+<p align="center"><sub>Sample data. Try it yourself with <code>pnpm demo</code>.</sub></p>
+
+The look is inspired by 2000s Chinese MMOs: a treasury (金库) of red lacquer and gold, with 钱 (*qián*, money) as its square-holed coin emblem. Tiles are bordered by their share of your assets, from white jade (白玉, under 1%) to vermilion (朱, 20% or more).
+
 ## What it does
 
 - **Net worth dashboard** — assets, debts, and net worth by category, with a history chart (1M–All).
@@ -52,6 +60,8 @@ pnpm start
 ```
 
 Open **http://127.0.0.1:3000**. Stop it with `Ctrl+C`; run `pnpm start` again whenever you want to use it.
+
+Want to look around first? `pnpm demo` runs the app with a sample portfolio in a throwaway database (your real data is never touched).
 
 > Prefer help? See [Set up with an AI agent](#set-up-with-an-ai-agent).
 
@@ -129,6 +139,7 @@ The agent can install dependencies, run and verify the app, explain where to fin
 
 ```sh
 pnpm dev          # dev server with hot reload (one per project folder)
+pnpm demo         # production build with a sample portfolio (after pnpm build)
 pnpm verify       # typecheck, lint, tests, production build, and a smoke test of every page
 pnpm test         # unit + integration tests
 pnpm db:generate  # create a migration after editing src/lib/db/schema.ts

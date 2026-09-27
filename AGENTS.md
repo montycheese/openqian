@@ -24,6 +24,7 @@ Always use Node 24 (`nvm use` reads `.nvmrc`) and pnpm (`corepack enable pnpm`).
 | `pnpm verify` | Typecheck, lint, all tests, production build, and `scripts/smoke.mjs` (loads every page against a seeded throwaway DB). **Run it before every commit and gate the commit on its exit code**, not on grepping its output. |
 | `pnpm test` | Vitest unit + integration tests (no network). |
 | `pnpm db:generate` | Create a migration after editing `src/lib/db/schema.ts`. |
+| `pnpm demo` | After `pnpm build`: runs the app with a sample portfolio in a throwaway DB. Use it for screenshots (`docs/`) and UI review. |
 
 ## Architecture map
 
@@ -50,6 +51,7 @@ scripts/smoke.mjs        Page smoke test used by pnpm verify.
 - **Money:** every amount carries its own currency code; convert with the converter from `src/lib/fx` (`loadConverter`). Debts are stored as positive amounts in debt categories.
 - **Dates:** use `localDate()` from `src/lib/dates.ts` for "today" (the user's calendar), never `toISOString().slice(0, 10)`.
 - **Mutations:** Server Actions in `"use server"` files return `ActionState` (`{ error?, ok?, message? }`); validate input with zod; call `recordSnapshot()` after changing values, then `revalidatePath("/", "layout")`. Forms use `<ActionForm>` (it submits via `onSubmit` so React doesn't wipe input on validation errors).
+- **Theme (Jade Treasury):** light only; colours are CSS variables in `globals.css` (`--lacquer`, `--gold`, `--ink`, `--jade`, …). Use the utilities `card` (paper panel), `lacquer` (red panel with gold trim, gold-light text), `paper` (row inside a lacquer panel), `brush` (brush font for Chinese labels), `btn`/`btn-primary`/`btn-danger`, `input`. Shared pieces live in `src/components/treasury.tsx` (coin emblem, ingot, seal, milestone coins, share-graded tiles); grades, milestones, and category Chinese labels in `src/lib/treasury.ts`. Keep wording plain — the flavour is visual. Fonts are system fonts; don't add web font downloads.
 - **Private mode:** wrap every displayed amount, quantity, price, or change in `<Sensitive>` (`src/components/sensitive.tsx`); client charts use `usePrivateMode()`.
 - **Schema changes:** edit `schema.ts`, run `pnpm db:generate`, commit the migration. Never edit a migration that has been committed.
 - **Adding a chain:** implement `ChainAdapter` (`src/lib/wallets/types.ts`) or add an EVM config via `createEvmChain`, register it in `chains/index.ts`, verify token contracts on-chain, and use only free public endpoints.
