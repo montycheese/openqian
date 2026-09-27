@@ -17,10 +17,19 @@ let log = "";
 server.stdout.on("data", (d) => (log += d));
 server.stderr.on("data", (d) => (log += d));
 
-async function get(route) {
+const daysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+async function get(route, expectText) {
   const res = await fetch(base + route);
   const body = await res.text();
-  const problem = res.status !== 200 ? `HTTP ${res.status}` : /Application error|Internal Server Error/.test(body) ? "error page" : null;
+  const problem =
+    res.status !== 200
+      ? `HTTP ${res.status}`
+      : /Application error|Internal Server Error/.test(body)
+        ? "error page"
+        : expectText && !body.includes(expectText)
+          ? `missing "${expectText}"`
+          : null;
   return { route, problem };
 }
 
@@ -52,11 +61,26 @@ try {
   db.prepare(
     "insert into holdings (id, account_id, symbol, name, type, quantity, price, market_value, currency) values ('h1', 'smoke-holdings', 'VOO', 'VOO', 'etf', 1, 500, 500, 'USD')",
   ).run();
+  db.prepare("insert into valuations (id, account_id, date, value, currency) values ('v4', 'smoke-value', ?, 120, 'USD')").run(
+    daysAgo(3),
+  );
+  // A few days of history so the charts render.
+  const addSnapshot = db.prepare(
+    "insert into snapshots (id, date, base_currency, assets, debts, net_worth) values (?, ?, 'USD', ?, 10, ?)",
+  );
+  const addSnapshotAccount = db.prepare(
+    "insert into snapshot_accounts (snapshot_id, account_id, category_id, native_value, native_currency, base_value, counted) values (?, 'smoke-holdings', ?, ?, 'USD', ?, 1)",
+  );
+  for (const [i, value] of [480, 510, 495, 500].entries()) {
+    addSnapshot.run(`s${i}`, daysAgo(40 - i * 10), value + 200, value + 190);
+    addSnapshotAccount.run(`s${i}`, cat("Investments"), value, value);
+  }
   db.close();
 
   const routes = [
     "/",
     "/?hidden=1",
+    "/?range=1m&hidden=1",
     "/accounts/new",
     "/accounts/smoke-value",
     "/accounts/smoke-eur",
@@ -66,7 +90,17 @@ try {
     "/connections",
     "/settings",
   ];
-  const results = [...empty, ...(await Promise.all(routes.map(get)))];
+  // Pages that must render a chart (its figure is labelled with the trend).
+  const charts = [
+    ["/?range=all", 'aria-label="Net worth over time:'],
+    ["/accounts/smoke-value?range=all", 'aria-label="Value over time:'],
+    ["/accounts/smoke-holdings?range=1y", 'aria-label="Value over time:'],
+  ];
+  const results = [
+    ...empty,
+    ...(await Promise.all(routes.map((r) => get(r)))),
+    ...(await Promise.all(charts.map(([r, text]) => get(r, text)))),
+  ];
   const missing = await get("/accounts/does-not-exist");
   results.push({ route: missing.route, problem: missing.problem === "HTTP 404" ? null : missing.problem ?? "expected 404" });
 

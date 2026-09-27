@@ -1,16 +1,25 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/action-form";
 import { Amount } from "@/components/money";
+import { HistoryCard } from "@/components/history-card";
 import { refreshAll } from "@/lib/refresh";
+import { formatFullDate, parseRange, pointsSince, rangeHref, type ChartPoint } from "@/lib/chart";
+import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney } from "@/lib/money";
-import { countConnections, getNetWorth } from "@/lib/queries";
+import { countConnections, getNetWorth, getNetWorthSeries } from "@/lib/queries";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
-  const { hidden } = await searchParams;
-  const includeHidden = hidden === "1";
-  const [nw, connectionCount] = await Promise.all([getNetWorth({ includeHidden }), countConnections()]);
+  const params = await searchParams;
+  const includeHidden = params.hidden === "1";
+  const range = parseRange(params.range);
+  const [nw, connectionCount, series] = await Promise.all([
+    getNetWorth({ includeHidden }),
+    countConnections(),
+    getNetWorthSeries(),
+  ]);
   const cur = nw.baseCurrency;
   const hasAccounts = nw.categories.some((c) => c.accounts.length > 0);
+  const query = { hidden: includeHidden ? "1" : undefined };
 
   return (
     <div className="space-y-6">
@@ -42,6 +51,15 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           </ActionForm>
         )}
       </section>
+
+      {(hasAccounts || series.points.length > 0) && (
+        <NetWorthHistory
+          points={series.points}
+          currency={series.baseCurrency}
+          range={range}
+          hrefFor={(r) => rangeHref("/", query, r)}
+        />
+      )}
 
       {nw.missingRates.length > 0 && (
         <p className="rounded-lg bg-warning-bg px-4 py-3 text-sm text-warning-fg">
@@ -113,11 +131,53 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
 
       {nw.hiddenCount > 0 && (
         <p className="text-center text-sm">
-          <Link href={includeHidden ? "/" : "/?hidden=1"} className="text-muted underline">
+          <Link
+            href={rangeHref("/", { hidden: includeHidden ? undefined : "1" }, range)}
+            className="text-muted underline"
+          >
             {includeHidden ? "Hide" : "Show"} {nw.hiddenCount} hidden account{nw.hiddenCount === 1 ? "" : "s"}
           </Link>
         </p>
       )}
     </div>
+  );
+}
+
+const HISTORY_NOTE = "Net worth history builds up each day you refresh or update values.";
+
+function NetWorthHistory({
+  points,
+  currency,
+  range,
+  hrefFor,
+}: {
+  points: ChartPoint[];
+  currency: string;
+  range: HistoryRange;
+  hrefFor: (range: HistoryRange) => string;
+}) {
+  if (points.length < 2) {
+    const only = points[0];
+    return (
+      <section className="card p-5">
+        <h2 className="text-sm text-muted">Net worth over time</h2>
+        {only && (
+          <p className="mt-1 text-sm">
+            <span className="num font-medium">{formatMoney(only.value, currency)}</span>{" "}
+            <span className="text-muted">on {formatFullDate(only.date)}</span>
+          </p>
+        )}
+        <p className="mt-2 text-sm text-muted">{HISTORY_NOTE}</p>
+      </section>
+    );
+  }
+  return (
+    <HistoryCard
+      title="Net worth over time"
+      currency={currency}
+      points={pointsSince(points, rangeStart(range))}
+      range={range}
+      hrefFor={hrefFor}
+    />
   );
 }
