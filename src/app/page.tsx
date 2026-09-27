@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/action-form";
 import { Amount } from "@/components/money";
-import { refreshAllConnections } from "@/lib/connections/actions";
+import { refreshAll } from "@/lib/refresh";
 import { formatMoney } from "@/lib/money";
 import { countConnections, getNetWorth } from "@/lib/queries";
 
@@ -27,15 +27,17 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             <p className="num font-medium">{formatMoney(nw.debts, cur)}</p>
           </div>
         </div>
-        {connectionCount > 0 && (
+        {hasAccounts && (
           <ActionForm
-            action={refreshAllConnections}
-            submitLabel={`Refresh ${connectionCount} connection${connectionCount === 1 ? "" : "s"}`}
+            action={refreshAll}
+            submitLabel="Refresh all"
             submitClassName="btn"
-            successMessage="Up to date"
             className="mt-4 space-y-2"
           >
-            {null}
+            <p className="text-xs text-muted">
+              Updates {connectionCount > 0 ? `${connectionCount} exchange connection${connectionCount === 1 ? "" : "s"} and ` : ""}
+              market prices for your holdings.
+            </p>
           </ActionForm>
         )}
       </section>
