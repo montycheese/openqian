@@ -6,7 +6,7 @@ vi.mock("@/lib/db", async (importOriginal) => ({ ...(await importOriginal<typeof
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { applyImport, previewImport } = await import("@/lib/import/actions");
-const { accounts, categories, holdings, imports } = await import("@/lib/db/schema");
+const { accounts, categories, holdings, imports, valuations } = await import("@/lib/db/schema");
 
 const csv = [
   "Account Number,Account Name,Symbol,Description,Quantity,Last Price,Current Value,Cost Basis Total",
@@ -29,15 +29,16 @@ describe("import flow", () => {
   it("previews, creates a new account, then re-import matches it by account number", async () => {
     const first = await previewImport({}, upload(csv));
     expect(first.error).toBeUndefined();
-    expect(first.preview!.matches).toEqual([null]);
+    expect(first.preview!.balances).toBeNull();
+    expect(first.preview!.holdings!.matches).toEqual([null]);
 
     const investments = db.select().from(categories).all().find((c) => c.name === "Investments")!;
-    const payload = (target: string, p = first.preview!) =>
+    const payload = (target: string, preview = first.preview!) =>
       JSON.stringify({
-        fileName: p.fileName,
+        fileName: preview.fileName,
         institution: "Fidelity",
-        asOf: p.asOf,
-        accounts: p.accounts.map((a) => ({ target, name: "Fidelity Individual", categoryId: investments.id, currency: "USD", mask: a.mask, holdings: a.holdings })),
+        asOf: preview.holdings!.asOf,
+        accounts: preview.holdings!.accounts.map((a) => ({ target, name: "Fidelity Individual", categoryId: investments.id, currency: "USD", mask: a.mask, holdings: a.holdings })),
       });
     const fd = new FormData();
     fd.set("payload", payload("new"));
@@ -50,13 +51,56 @@ describe("import flow", () => {
 
     // A newer export replaces positions in the matched account.
     const second = await previewImport({}, upload(csv.replace("ACME CORP,5,$20.00,$100.00", "ACME CORP,6,$20.00,$120.00")));
-    expect(second.preview!.matches).toEqual([account.id]);
+    expect(second.preview!.holdings!.matches).toEqual([account.id]);
     const fd2 = new FormData();
     fd2.set("payload", payload(account.id, second.preview!));
     await applyImport({}, fd2);
     expect(db.select().from(accounts).all()).toHaveLength(1);
     expect(db.select().from(holdings).all().map((h) => h.marketValue).sort()).toEqual([120, 50]);
     expect(db.select().from(imports).all()).toHaveLength(2);
+  });
+
+  it("imports OFX balances, treating credit card debt as a positive debt amount", async () => {
+    const ofx = `<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>USD
+<BANKACCTFROM><BANKID>1<ACCTID>000011112222<ACCTTYPE>CHECKING</BANKACCTFROM>
+<LEDGERBAL><BALAMT>1500.00<DTASOF>20260926</LEDGERBAL></STMTRS></STMTTRNRS></BANKMSGSRSV1>
+<CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS><CURDEF>USD<CCACCTFROM><ACCTID>4000000000009999</CCACCTFROM>
+<LEDGERBAL><BALAMT>-300.00<DTASOF>20260926</LEDGERBAL></CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>`;
+    const preview = (await previewImport({}, upload(ofx, "Chase_Activity.QFX"))).preview!;
+    expect(preview.holdings).toBeNull();
+    expect(preview.balances!.institution).toBe("Chase");
+
+    const cat = (name: string) => db.select().from(categories).all().find((c) => c.name === name)!.id;
+    const apply = async (targets: string[]) => {
+      const fd = new FormData();
+      fd.set(
+        "payload",
+        JSON.stringify({
+          fileName: preview.fileName,
+          institution: "Chase",
+          asOf: preview.balances!.asOf,
+          balances: preview.balances!.accounts.map((a, i) => ({
+            target: targets[i],
+            name: `Chase ${a.name}`,
+            categoryId: a.kind === "credit" ? cat("Credit Cards") : cat("Cash"),
+            currency: a.currency,
+            mask: a.mask,
+            balance: a.balance,
+            asOf: a.asOf,
+          })),
+        }),
+      );
+      return applyImport({}, fd);
+    };
+    expect((await apply(["new", "new"])).imported).toHaveLength(2);
+    const rows = db.select().from(valuations).all();
+    expect(rows.map((v) => v.value).sort((a, b) => a - b)).toEqual([300, 1500]);
+
+    // Importing the same statement again into the matched accounts doesn't duplicate values.
+    const again = (await previewImport({}, upload(ofx, "Chase_Activity.QFX"))).preview!;
+    await apply(again.balances!.matches as string[]);
+    expect(db.select().from(valuations).all()).toHaveLength(2);
+    expect(db.select().from(accounts).all()).toHaveLength(2);
   });
 
   it("rejects unsupported and unreadable files", async () => {

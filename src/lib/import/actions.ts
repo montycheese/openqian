@@ -1,41 +1,67 @@
 "use server";
 
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { accounts, holdingTypes, holdings, imports } from "@/lib/db/schema";
+import { accounts, categories, holdingTypes, holdings, imports, valuations } from "@/lib/db/schema";
+import { parseOfx, type BalancesImport } from "./ofx";
 import { parseHoldingsTable, type HoldingsImport } from "./parse-holdings";
-import { readTable, SUPPORTED_EXTENSIONS } from "./read-table";
+import { readTable } from "./read-table";
 
 const MAX_BYTES = 5 * 1024 * 1024;
+const SUPPORTED = [".csv", ".xlsx", ".ofx", ".qfx"];
 
-export type PreviewState = {
-  error?: string;
-  preview?: HoldingsImport & {
-    fileName: string;
-    /** Existing account id matched by account-number mask, per parsed account. */
-    matches: (string | null)[];
-  };
+/** Existing account id matched by account-number mask, per parsed account. */
+type Matches = { matches: (string | null)[] };
+
+export type ImportPreview = {
+  fileName: string;
+  holdings: (HoldingsImport & Matches) | null;
+  balances: (BalancesImport & Matches) | null;
 };
+
+export type PreviewState = { error?: string; preview?: ImportPreview };
+
+function matchByMask(kind: "value" | "holdings", masks: (string | null)[]): (string | null)[] {
+  const existing = getDb()
+    .select({ id: accounts.id, mask: accounts.accountMask })
+    .from(accounts)
+    .where(and(eq(accounts.kind, kind), isNotNull(accounts.accountMask)))
+    .all();
+  return masks.map((m) => (m && existing.find((e) => e.mask === m)?.id) || null);
+}
 
 export async function previewImport(_: PreviewState, formData: FormData): Promise<PreviewState> {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to import" };
   if (file.size > MAX_BYTES) return { error: "File is larger than 5 MB" };
-  if (!SUPPORTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))) {
-    return { error: `Unsupported file type. Use ${SUPPORTED_EXTENSIONS.join(" or ")}.` };
-  }
+  const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
+  if (!SUPPORTED.includes(ext)) return { error: `Unsupported file type. Use ${SUPPORTED.join(", ")}.` };
+
   try {
-    const parsed = parseHoldingsTable(await readTable(file.name, await file.arrayBuffer()), file.name);
-    const db = getDb();
-    const masked = db
-      .select({ id: accounts.id, mask: accounts.accountMask })
-      .from(accounts)
-      .where(and(eq(accounts.kind, "holdings"), isNotNull(accounts.accountMask)))
-      .all();
-    const matches = parsed.accounts.map((a) => (a.mask && masked.find((m) => m.mask === a.mask)?.id) || null);
-    return { preview: { ...parsed, fileName: file.name, matches } };
+    let holdingsResult: HoldingsImport | null = null;
+    let balancesResult: BalancesImport | null = null;
+    if (ext === ".ofx" || ext === ".qfx") {
+      const ofx = parseOfx(await file.text(), file.name);
+      holdingsResult = ofx.holdings;
+      balancesResult = ofx.balances;
+    } else {
+      holdingsResult = parseHoldingsTable(await readTable(file.name, await file.arrayBuffer()), file.name);
+    }
+    return {
+      preview: {
+        fileName: file.name,
+        holdings: holdingsResult && {
+          ...holdingsResult,
+          matches: matchByMask("holdings", holdingsResult.accounts.map((a) => a.mask)),
+        },
+        balances: balancesResult && {
+          ...balancesResult,
+          matches: matchByMask("value", balancesResult.accounts.map((a) => a.mask)),
+        },
+      },
+    };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't read this file" };
   }
@@ -51,25 +77,27 @@ const holdingSchema = z.object({
   costBasis: z.number().finite().nullable(),
 });
 
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const target = {
+  target: z.string().min(1), // existing account id, "new", or "skip"
+  name: z.string().trim(),
+  categoryId: z.string(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  mask: z.string().nullable(),
+};
+
 const applySchema = z.object({
   fileName: z.string().min(1),
   institution: z.string().nullable(),
-  asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  accounts: z
-    .array(
-      z.object({
-        target: z.string().min(1), // existing account id, "new", or "skip"
-        name: z.string().trim(),
-        categoryId: z.string(),
-        currency: z.string().regex(/^[A-Z]{3}$/),
-        mask: z.string().nullable(),
-        holdings: z.array(holdingSchema).min(1),
-      }),
-    )
-    .min(1),
+  asOf: date,
+  accounts: z.array(z.object({ ...target, holdings: z.array(holdingSchema).min(1) })).default([]),
+  balances: z.array(z.object({ ...target, balance: z.number().finite(), asOf: date })).default([]),
 });
 
-export type ApplyState = { error?: string; imported?: { accountId: string; name: string; positions: number }[] };
+export type ApplyState = {
+  error?: string;
+  imported?: { accountId: string; name: string; summary: string }[];
+};
 
 export async function applyImport(_: ApplyState, formData: FormData): Promise<ApplyState> {
   let payload: unknown;
@@ -81,17 +109,18 @@ export async function applyImport(_: ApplyState, formData: FormData): Promise<Ap
   const parsed = applySchema.safeParse(payload);
   if (!parsed.success) return { error: "Invalid import data" };
   const data = parsed.data;
-  const chosen = data.accounts.filter((a) => a.target !== "skip");
-  if (chosen.length === 0) return { error: "Choose at least one account to import" };
-  if (chosen.some((a) => a.target === "new" && !a.name)) return { error: "Give each new account a name" };
+  const chosenHoldings = data.accounts.filter((a) => a.target !== "skip");
+  const chosenBalances = data.balances.filter((a) => a.target !== "skip");
+  if (chosenHoldings.length + chosenBalances.length === 0) return { error: "Choose at least one account to import" };
+  if ([...chosenHoldings, ...chosenBalances].some((a) => a.target === "new" && !a.name)) {
+    return { error: "Give each new account a name" };
+  }
 
   const db = getDb();
-  const priceAsOf = new Date(`${data.asOf}T00:00:00Z`);
+  const note = `Imported from ${data.fileName}`;
   try {
-    const imported = db.transaction((tx) =>
-      chosen.map((a) => {
-        let accountId = a.target;
-        let name = a.name;
+    const imported = db.transaction((tx) => {
+      function resolveAccount(a: z.infer<typeof applySchema>["accounts"][number] | z.infer<typeof applySchema>["balances"][number], kind: "value" | "holdings") {
         if (a.target === "new") {
           const [row] = tx
             .insert(accounts)
@@ -99,49 +128,65 @@ export async function applyImport(_: ApplyState, formData: FormData): Promise<Ap
               name: a.name,
               institution: data.institution,
               categoryId: a.categoryId,
-              kind: "holdings",
+              kind,
               currency: a.currency,
               source: "import",
               accountMask: a.mask,
             })
-            .returning({ id: accounts.id })
+            .returning()
             .all();
-          accountId = row.id;
-        } else {
-          const existing = tx.select().from(accounts).where(eq(accounts.id, a.target)).get();
-          if (!existing || existing.kind !== "holdings") throw new Error("Target account is not a holdings account");
-          name = existing.name;
-          tx.update(accounts)
-            .set({ source: "import", accountMask: a.mask ?? existing.accountMask })
-            .where(eq(accounts.id, accountId))
-            .run();
+          return row;
         }
+        const existing = tx.select().from(accounts).where(eq(accounts.id, a.target)).get();
+        if (!existing || existing.kind !== kind) throw new Error("The chosen account can't receive this import");
+        tx.update(accounts)
+          .set({ source: "import", accountMask: a.mask ?? existing.accountMask })
+          .where(eq(accounts.id, existing.id))
+          .run();
+        return existing;
+      }
 
-        // An import is a full snapshot of the account's positions.
-        tx.delete(holdings).where(eq(holdings.accountId, accountId)).run();
+      const results: NonNullable<ApplyState["imported"]> = [];
+      const priceAsOf = new Date(`${data.asOf}T00:00:00Z`);
+      for (const a of chosenHoldings) {
+        const account = resolveAccount(a, "holdings");
+        // A positions import is a full snapshot of the account.
+        tx.delete(holdings).where(eq(holdings.accountId, account.id)).run();
         tx.insert(holdings)
           .values(
             a.holdings.map((h) => ({
               ...h,
-              accountId,
+              accountId: account.id,
               currency: a.currency,
               priceSource: "import" as const,
               priceAsOf: h.price !== null ? priceAsOf : null,
             })),
           )
           .run();
+        const total = a.holdings.reduce((s, h) => s + h.marketValue, 0);
         tx.insert(imports)
-          .values({
-            accountId,
-            fileName: data.fileName,
-            asOf: data.asOf,
-            positions: a.holdings.length,
-            totalValue: a.holdings.reduce((s, h) => s + h.marketValue, 0),
-          })
+          .values({ accountId: account.id, fileName: data.fileName, asOf: data.asOf, positions: a.holdings.length, totalValue: total })
           .run();
-        return { accountId, name, positions: a.holdings.length };
-      }),
-    );
+        results.push({ accountId: account.id, name: account.name, summary: `${a.holdings.length} positions` });
+      }
+
+      for (const b of chosenBalances) {
+        const account = resolveAccount(b, "value");
+        const category = tx.select().from(categories).where(eq(categories.id, account.categoryId)).get();
+        // Statements report money owed as negative; debt accounts track it as a positive amount.
+        const value = category?.kind === "debt" ? -b.balance : b.balance;
+        // Re-importing the same day's statement replaces the earlier imported value.
+        tx.delete(valuations)
+          .where(and(eq(valuations.accountId, account.id), eq(valuations.date, b.asOf), like(valuations.note, "Imported from %")))
+          .run();
+        tx.insert(valuations).values({ accountId: account.id, date: b.asOf, value, currency: b.currency, note }).run();
+        tx.insert(imports)
+          .values({ accountId: account.id, fileName: data.fileName, asOf: b.asOf, positions: 0, totalValue: value })
+          .run();
+        results.push({ accountId: account.id, name: account.name, summary: `balance as of ${b.asOf}` });
+      }
+      return results;
+    });
     revalidatePath("/", "layout");
     return { imported };
   } catch (err) {
