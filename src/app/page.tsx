@@ -7,15 +7,15 @@ import { formatFullDate, parseRange, pointsSince, rangeHref, withLatestPoint, ty
 import { localDate } from "@/lib/dates";
 import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney } from "@/lib/money";
-import { countConnections, getNetWorth, getNetWorthSeries } from "@/lib/queries";
+import { countSyncedSources, getNetWorth, getNetWorthSeries } from "@/lib/queries";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
   const includeHidden = params.hidden === "1";
   const range = parseRange(params.range);
-  const [nw, connectionCount, series] = await Promise.all([
+  const [nw, sources, series] = await Promise.all([
     getNetWorth({ includeHidden }),
-    countConnections(),
+    countSyncedSources(),
     getNetWorthSeries(),
   ]);
   const cur = nw.baseCurrency;
@@ -46,8 +46,14 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           >
             <p className="text-xs text-muted">
               Updates{" "}
-              {connectionCount > 0 ? `${connectionCount} exchange connection${connectionCount === 1 ? "" : "s"}, ` : ""}
-              market prices{connectionCount > 0 ? "," : ""} and exchange rates.
+              {[
+                sources.exchanges > 0 && `${sources.exchanges} exchange${sources.exchanges === 1 ? "" : "s"}`,
+                sources.wallets > 0 && `${sources.wallets} wallet${sources.wallets === 1 ? "" : "s"}`,
+                "market prices",
+              ]
+                .filter(Boolean)
+                .join(", ")}{" "}
+              and exchange rates.
             </p>
           </ActionForm>
         )}

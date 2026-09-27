@@ -3,7 +3,9 @@ import { CurrencySelect, Field, Select } from "@/components/fields";
 import { deleteCategory, saveCategory, setBaseCurrency } from "@/lib/actions";
 import { clearManualRateAction, refreshFxAction, saveManualRate } from "@/lib/fx/actions";
 import type { RateInfo } from "@/lib/fx";
-import { getBaseCurrency, getFxRates, listCategories } from "@/lib/queries";
+import { getBaseCurrency, getFxRates, getRpcOverrides, listCategories } from "@/lib/queries";
+import { saveRpcUrls } from "@/lib/wallets/actions";
+import { CHAINS } from "@/lib/wallets/chains";
 
 const kindOptions = [
   { value: "asset", label: "Asset" },
@@ -11,7 +13,12 @@ const kindOptions = [
 ];
 
 export default async function SettingsPage() {
-  const [baseCurrency, categories, rates] = await Promise.all([getBaseCurrency(), listCategories(), getFxRates()]);
+  const [baseCurrency, categories, rates, rpcOverrides] = await Promise.all([
+    getBaseCurrency(),
+    listCategories(),
+    getFxRates(),
+    getRpcOverrides(),
+  ]);
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">Settings</h1>
@@ -82,6 +89,43 @@ export default async function SettingsPage() {
             </ActionForm>
           </div>
         </details>
+      </section>
+
+      <section className="card overflow-hidden">
+        <div className="border-b border-border px-4 py-3">
+          <h2 className="font-medium">Blockchain endpoints</h2>
+          <p className="mt-1 text-sm text-muted">
+            Wallets are read from free public endpoints. Add your own (e.g. a personal node) to use it first.
+          </p>
+        </div>
+        <ul className="divide-y divide-border">
+          {CHAINS.map((chain) => (
+            <li key={chain.id}>
+              <details>
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 hover:bg-background">
+                  <span>{chain.label}</span>
+                  <span className="text-xs text-muted">{rpcOverrides[chain.id] ? "Custom" : "Default"}</span>
+                </summary>
+                <div className="space-y-2 border-t border-border bg-background px-4 py-4">
+                  <ActionForm action={saveRpcUrls} submitLabel="Save" successMessage="Saved">
+                    <input type="hidden" name="chain" value={chain.id} />
+                    <label className="block">
+                      <span className="label">Custom endpoints, one per line (leave empty for defaults)</span>
+                      <textarea
+                        name="urls"
+                        rows={2}
+                        defaultValue={rpcOverrides[chain.id] ?? ""}
+                        className="input font-mono text-xs"
+                        spellCheck={false}
+                      />
+                    </label>
+                    <p className="break-all text-xs text-muted">Defaults: {chain.defaultRpcUrls.join(", ")}</p>
+                  </ActionForm>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ul>
       </section>
     </div>
   );

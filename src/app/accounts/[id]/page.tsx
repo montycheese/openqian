@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { walletChains } from "@/lib/wallets";
+import { refreshWalletAction } from "@/lib/wallets/actions";
+import { chainById } from "@/lib/wallets/chains";
 import { notFound } from "next/navigation";
 import { localDate } from "@/lib/dates";
 import { ActionForm } from "@/components/action-form";
@@ -26,7 +29,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
   const range = parseRange((await searchParams).range);
   const [detail, categories] = await Promise.all([getAccountDetail(id), listCategories()]);
   if (!detail) notFound();
-  const { account, category, history, positions, summary, baseCurrency, link, lastImport } = detail;
+  const { account, category, history, positions, summary, baseCurrency, link, wallet, lastImport } = detail;
   const isDebt = category.kind === "debt";
   const chart = await accountChart(account, history, baseCurrency, range);
 
@@ -61,6 +64,33 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
             <ActionForm action={refreshConnection} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
               <input type="hidden" name="id" value={link.id} />
             </ActionForm>
+          </div>
+        )}
+        {wallet && (
+          <div className="mt-3 space-y-2 text-sm">
+            <p className="break-all font-mono text-xs text-muted">{wallet.address}</p>
+            <p className="flex flex-wrap gap-x-3 gap-y-1">
+              {walletChains(wallet).map((id) => {
+                const chain = chainById(id);
+                return chain ? (
+                  <a key={id} href={chain.explorerUrl(wallet.address)} target="_blank" rel="noreferrer" className="underline">
+                    {chain.label} ↗
+                  </a>
+                ) : null;
+              })}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={wallet.status === "ok" ? "text-muted" : "text-negative"}>
+                {wallet.status === "ok"
+                  ? wallet.lastRefreshedAt
+                    ? `Updated ${wallet.lastRefreshedAt.toLocaleString("en-US")}`
+                    : "Not loaded yet"
+                  : wallet.lastError}
+              </span>
+              <ActionForm action={refreshWalletAction} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
+                <input type="hidden" name="id" value={wallet.id} />
+              </ActionForm>
+            </div>
           </div>
         )}
         {lastImport && !link && (

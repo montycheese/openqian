@@ -61,6 +61,10 @@ try {
   addAccount.run("smoke-eur", "Euro savings", cat("Cash"), "value", "EUR");
   addAccount.run("smoke-holdings", "Brokerage", cat("Investments"), "holdings", "USD");
   addAccount.run("smoke-debt", "Card", cat("Credit Cards"), "value", "USD");
+  addAccount.run("smoke-wallet", "Hot wallet", cat("Crypto"), "holdings", "USD");
+  db.prepare(
+    "insert into wallets (id, account_id, family, address, chains) values ('w1', 'smoke-wallet', 'evm', '0x000000000000000000000000000000000000dead', '[\"ethereum\",\"base\"]')",
+  ).run();
   const addValue = db.prepare("insert into valuations (id, account_id, date, value, currency) values (?, ?, '2026-01-01', ?, ?)");
   addValue.run("v1", "smoke-value", 100, "USD");
   addValue.run("v2", "smoke-eur", 100, "EUR");
@@ -97,11 +101,14 @@ try {
     "/connections",
     "/settings",
   ];
-  // Pages that must render a chart (its figure is labelled with the trend).
+  // Pages that must contain specific content (charts are labelled with their trend).
   const charts = [
     ["/?range=all", 'aria-label="Net worth over time:'],
     ["/accounts/smoke-value?range=all", 'aria-label="Value over time:'],
     ["/accounts/smoke-holdings?range=1y", 'aria-label="Value over time:'],
+    ["/accounts/smoke-wallet", "0x000000000000000000000000000000000000dead"],
+    ["/connections", "Add a wallet"],
+    ["/settings", "Blockchain endpoints"],
   ];
   const results = [
     ...empty,

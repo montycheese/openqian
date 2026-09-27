@@ -1,7 +1,7 @@
 import { asc, count, desc, eq } from "drizzle-orm";
 import { connection } from "next/server";
 import { getDb } from "@/lib/db";
-import { accounts, categories, connections, holdings, imports, settings, valuations } from "@/lib/db/schema";
+import { accounts, categories, connections, holdings, imports, settings, valuations, wallets } from "@/lib/db/schema";
 import { listRates, loadConverter } from "@/lib/fx";
 import type { ChartPoint } from "@/lib/chart";
 import { getAccountHistory, getNetWorthHistory } from "@/lib/history";
@@ -53,9 +53,10 @@ export async function getAccountDetail(id: string) {
     .all();
   const summary = summarizeAccount(account, history[0], positions, loadConverter(db, baseCurrency));
   const link = db.select().from(connections).where(eq(connections.accountId, id)).get() ?? null;
+  const wallet = db.select().from(wallets).where(eq(wallets.accountId, id)).get() ?? null;
   const lastImport =
     db.select().from(imports).where(eq(imports.accountId, id)).orderBy(desc(imports.createdAt)).limit(1).get() ?? null;
-  return { account, category, history, positions, summary, baseCurrency, link, lastImport };
+  return { account, category, history, positions, summary, baseCurrency, link, wallet, lastImport };
 }
 
 export async function getFxRates() {
@@ -63,9 +64,14 @@ export async function getFxRates() {
   return listRates(getDb(), baseCurrency);
 }
 
-export async function countConnections(): Promise<number> {
+/** How many sources "Refresh all" pulls balances from. */
+export async function countSyncedSources(): Promise<{ exchanges: number; wallets: number }> {
   await connection();
-  return getDb().select({ n: count() }).from(connections).get()?.n ?? 0;
+  const db = getDb();
+  return {
+    exchanges: db.select({ n: count() }).from(connections).get()?.n ?? 0,
+    wallets: db.select({ n: count() }).from(wallets).get()?.n ?? 0,
+  };
 }
 
 /** Every net worth snapshot in the base currency, oldest first. */
@@ -85,4 +91,11 @@ export async function getAccountSeries(id: string, baseCurrency: string): Promis
     date: p.date,
     value: p.baseValue,
   }));
+}
+
+/** Custom RPC endpoints per chain id (empty when using the defaults). */
+export async function getRpcOverrides(): Promise<Record<string, string>> {
+  await connection();
+  const rows = getDb().select().from(settings).all();
+  return Object.fromEntries(rows.filter((r) => r.key.startsWith("rpc:")).map((r) => [r.key.slice(4), r.value]));
 }
