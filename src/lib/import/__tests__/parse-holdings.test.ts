@@ -124,3 +124,26 @@ it("rejects files without a positions table", async () => {
     /positions table/,
   );
 });
+
+describe("institution detection", () => {
+  const rows = (footer: string) =>
+    csv(
+      [
+        "Account Number,Account Name,Symbol,Description,Quantity,Last Price,Current Value",
+        "Z00001234,Individual,VTI,VANGUARD TOTAL STOCK MARKET ETF,10,$300.00,$3000.00",
+        "Z00001234,Individual,VXUS,VANGUARD TOTAL INTL STOCK ETF,5,$60.00,$300.00",
+        "",
+        footer,
+      ].join("\n"),
+    );
+
+  it("ignores fund names in holding rows and reads the file's own footer", async () => {
+    const withFooter = rows('"Brokerage services are provided by Fidelity Brokerage Services LLC (FBS)."');
+    expect(parseHoldingsTable(await readTable("Portfolio_Positions.csv", withFooter), "Portfolio_Positions.csv").institution).toBe("Fidelity");
+  });
+
+  it("leaves the institution unknown rather than guessing from holdings", async () => {
+    const noFooter = rows('"Date downloaded 09/27/2026"');
+    expect(parseHoldingsTable(await readTable("Portfolio_Positions.csv", noFooter), "Portfolio_Positions.csv").institution).toBeNull();
+  });
+});

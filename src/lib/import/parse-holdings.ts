@@ -32,7 +32,7 @@ export type HoldingsImport = {
   warnings: string[];
 };
 
-type Column = "account" | "accountName" | "symbol" | "name" | "quantity" | "price" | "value" | "cost" | "type";
+type Column = "account" | "accountName" | "institution" | "symbol" | "name" | "quantity" | "price" | "value" | "cost" | "type";
 
 const normalize = (h: string) =>
   h
@@ -46,6 +46,7 @@ const normalize = (h: string) =>
 const MATCHERS: Record<Column, (h: string) => boolean> = {
   account: (h) => /^account( number| no| num)?$/.test(h),
   accountName: (h) => /^account (name|nickname|description)$/.test(h),
+  institution: (h) => /^(institution|firm|brokerage)$/.test(h),
   symbol: (h) => /^(symbol|ticker)\b/.test(h),
   name: (h) => /^(description|name|security|security name|security description|investment|investment name)$/.test(h),
   quantity: (h) => /^(quantity|qty|shares)\b/.test(h),
@@ -150,6 +151,9 @@ export function parseHoldingsTable(rows: Table, fileName: string): HoldingsImpor
   const warnings: string[] = [];
   const groups = new Map<string, ParsedAccount>();
   const totals: number[] = [];
+  // Where the file names its institution: the file name, text around the table, or an
+  // institution column. Never holding rows — a Fidelity file full of Vanguard funds
+  // must not be detected as Vanguard.
   let institutionText = preamble + " " + fileName;
 
   for (const row of rows.slice(index + 1)) {
@@ -165,11 +169,14 @@ export function parseHoldingsTable(rows: Table, fileName: string): HoldingsImpor
       continue;
     }
     if (value === null && quantity !== null && price !== null) value = quantity * price;
-    if (value === null) continue; // footers, disclaimers, blank lines
+    if (value === null) {
+      institutionText += " " + row.join(" "); // footers and disclaimers
+      continue;
+    }
 
     const name = get(row, "name") || symbolCell;
     if (!name && !symbolCell) continue;
-    institutionText += " " + row.join(" ");
+    institutionText += " " + get(row, "institution");
 
     const label = get(row, "account");
     let group = groups.get(label);
