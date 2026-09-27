@@ -157,7 +157,7 @@ describe("refreshWallet", () => {
     chainBalances.base = [eth(2)];
     mock.mockImplementationOnce(async () => new Response("", { status: 429 }));
     const res = await refreshWallet(db, wallet.id);
-    expect(res.message).toMatch(/rate limit/);
+    expect(res.message).toBeUndefined(); // the last price covers it, so nothing to warn about
     expect(db.select().from(holdings).get()).toMatchObject({ quantity: 2, price: 2000, marketValue: 4000 });
   });
 
