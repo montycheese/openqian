@@ -9,7 +9,7 @@ type Props = {
   submitClassName?: string;
   successMessage?: string;
   className?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 /** A form bound to a Server Action that reports validation errors inline. */

@@ -24,7 +24,7 @@ export function formatNumber(n: number, maxFractionDigits = 6): string {
 /** Converts an amount into the base currency, or null when no rate is known. */
 export type Converter = (amount: number, currency: string) => number | null;
 
-/** Until FX rates exist, only amounts already in the base currency convert. */
+/** Converts only amounts already in the base currency (see lib/fx for real rates). */
 export function sameCurrencyConverter(base: string): Converter {
   return (amount, currency) => (currency === base ? amount : null);
 }
