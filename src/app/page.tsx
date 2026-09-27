@@ -36,7 +36,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           >
             <p className="text-xs text-muted">
               Updates {connectionCount > 0 ? `${connectionCount} exchange connection${connectionCount === 1 ? "" : "s"} and ` : ""}
-              market prices for your holdings.
+              market prices, and exchange rates.
             </p>
           </ActionForm>
         )}
@@ -44,8 +44,12 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
 
       {nw.missingRates.length > 0 && (
         <p className="rounded-lg bg-warning-bg px-4 py-3 text-sm text-warning-fg">
-          Amounts in {nw.missingRates.join(", ")} aren&apos;t included in totals yet — exchange rates arrive in a
-          later update.
+          No exchange rate for {nw.missingRates.join(", ")}, so those amounts aren&apos;t in the totals. Click Refresh
+          all, or{" "}
+          <Link href="/settings" className="underline">
+            set a rate in Settings
+          </Link>
+          .
         </p>
       )}
 
