@@ -2,7 +2,8 @@ import { asc, count, desc, eq } from "drizzle-orm";
 import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, holdings, imports, settings, valuations } from "@/lib/db/schema";
-import { DEFAULT_BASE_CURRENCY, sameCurrencyConverter } from "@/lib/money";
+import { loadConverter } from "@/lib/fx";
+import { DEFAULT_BASE_CURRENCY } from "@/lib/money";
 import { summarizeAccount, summarizeNetWorth } from "@/lib/valuation";
 
 export async function getBaseCurrency(): Promise<string> {
@@ -25,7 +26,7 @@ export async function getNetWorth(opts: { includeHidden?: boolean } = {}) {
     accounts: db.select().from(accounts).all(),
     valuations: db.select().from(valuations).all(),
     holdings: db.select().from(holdings).all(),
-    convert: sameCurrencyConverter(baseCurrency),
+    convert: loadConverter(db, baseCurrency),
     includeHidden: opts.includeHidden,
   });
 }
@@ -48,7 +49,7 @@ export async function getAccountDetail(id: string) {
     .where(eq(holdings.accountId, id))
     .orderBy(desc(holdings.marketValue))
     .all();
-  const summary = summarizeAccount(account, history[0], positions, sameCurrencyConverter(baseCurrency));
+  const summary = summarizeAccount(account, history[0], positions, loadConverter(db, baseCurrency));
   const link = db.select().from(connections).where(eq(connections.accountId, id)).get() ?? null;
   const lastImport =
     db.select().from(imports).where(eq(imports.accountId, id)).orderBy(desc(imports.createdAt)).limit(1).get() ?? null;
