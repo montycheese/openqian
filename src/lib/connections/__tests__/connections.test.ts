@@ -26,7 +26,7 @@ vi.mock("@/lib/connections/exchange", async (importOriginal) => {
       [fakeExchange.permissions.can_trade && "trade", fakeExchange.permissions.can_transfer && "transfer"].filter(Boolean),
     fetchPositions: async () => {
       if (fakeExchange.fail) throw fakeExchange.fail;
-      return mod.toPositions(fakeExchange.totals, { BTC: 100_000, ETH: 4_000 });
+      return { ...mod.toPositions(fakeExchange.totals, { BTC: 100_000, ETH: 4_000 }), warnings: [] };
     },
   };
 });

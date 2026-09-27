@@ -1,4 +1,4 @@
-import type { Exchange } from "ccxt";
+import type { Exchange, Order } from "ccxt";
 import type { ExchangeId, HoldingType } from "@/lib/db/schema";
 
 export const EXCHANGE_LABELS: Record<ExchangeId, string> = {
@@ -76,10 +76,60 @@ export function toPositions(
   return { positions, unpriced };
 }
 
-/** Fetches balances and prices them in USD using the exchange's own markets. */
+type BalanceParts = Record<"free" | "used" | "total", Record<string, number | undefined>>;
+
+/** Funds locked by open orders: buys reserve quote currency, sells reserve the base asset. */
+export function reservedByOrders(orders: Pick<Order, "symbol" | "side" | "price" | "amount" | "filled" | "remaining">[]) {
+  const reserved: Record<string, number> = {};
+  const add = (code: string, n: number) => (reserved[code] = (reserved[code] ?? 0) + n);
+  for (const o of orders) {
+    const [base, quoteWithSettle] = (o.symbol ?? "").split("/");
+    const quote = quoteWithSettle?.split(":")[0];
+    const remaining = o.remaining ?? (o.amount ?? 0) - (o.filled ?? 0);
+    if (!base || !quote || !(remaining > 0)) continue;
+    if (o.side === "sell") add(base, remaining);
+    else if (o.side === "buy" && o.price) add(quote, remaining * o.price);
+  }
+  return reserved;
+}
+
+/**
+ * Total per currency, counting funds held by open orders. Coinbase's accounts
+ * API can report hold = 0 while an order has reserved funds, which drops them
+ * from the total; taking the larger of the reported hold and what open orders
+ * reserve fixes that without double-counting exchanges that report holds.
+ */
+export function totalsWithReserved(balance: BalanceParts, reserved: Record<string, number>) {
+  const codes = new Set([...Object.keys(balance.total), ...Object.keys(balance.free), ...Object.keys(reserved)]);
+  const totals: Record<string, number> = {};
+  for (const code of codes) {
+    const free = balance.free[code] ?? 0;
+    const used = balance.used[code] ?? 0;
+    const reported = balance.total[code] ?? free + used;
+    totals[code] = Math.max(reported, free + Math.max(used, reserved[code] ?? 0));
+  }
+  return totals;
+}
+
+async function openOrders(exchange: Exchange): Promise<Order[]> {
+  if (!exchange.has.fetchOpenOrders) return [];
+  return exchange.fetchOpenOrders(undefined, undefined, undefined, exchange.id === "coinbase" ? { paginate: true } : {});
+}
+
+/** Fetches balances (including funds in open orders) and prices them in USD. */
 export async function fetchPositions(exchange: Exchange) {
-  const balance = await exchange.fetchBalance();
-  const totals = (balance.total ?? {}) as unknown as Record<string, number | undefined>;
+  const balance = (await exchange.fetchBalance()) as unknown as Partial<BalanceParts>;
+  const warnings: string[] = [];
+  let reserved: Record<string, number> = {};
+  try {
+    reserved = reservedByOrders(await openOrders(exchange));
+  } catch {
+    warnings.push("Couldn't read open orders, so funds reserved by them may be missing.");
+  }
+  const totals = totalsWithReserved(
+    { free: balance.free ?? {}, used: balance.used ?? {}, total: balance.total ?? {} },
+    reserved,
+  );
   const held = Object.keys(totals).filter(
     (c) => (totals[c] ?? 0) > 1e-12 && !FIAT.has(c) && !USD_STABLECOINS.has(c),
   );
@@ -108,5 +158,5 @@ export async function fetchPositions(exchange: Exchange) {
   const names = Object.fromEntries(
     Object.entries(exchange.currencies ?? {}).map(([code, c]) => [code, c?.name ?? undefined]),
   );
-  return toPositions(totals, usdPrices, names);
+  return { ...toPositions(totals, usdPrices, names), warnings };
 }

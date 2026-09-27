@@ -45,8 +45,13 @@ function replaceHoldings(accountId: string, positions: ExchangePosition[]) {
   });
 }
 
-const unpricedMessage = (unpriced: string[]) =>
-  unpriced.length ? `No USD price found for ${unpriced.join(", ")}; those are shown with a $0 value.` : undefined;
+function refreshMessage({ unpriced, warnings }: { unpriced: string[]; warnings: string[] }) {
+  const notes = [
+    unpriced.length > 0 && `No USD price found for ${unpriced.join(", ")}; those are shown with a $0 value.`,
+    ...warnings,
+  ].filter(Boolean);
+  return notes.length > 0 ? notes.join(" ") : undefined;
+}
 
 export async function addConnection(_: ConnectionState, formData: FormData): Promise<ConnectionState> {
   const parsed = z
@@ -99,7 +104,7 @@ export async function addConnection(_: ConnectionState, formData: FormData): Pro
     .run();
   replaceHoldings(account.id, result.positions);
   revalidatePath("/", "layout");
-  return { ok: true, message: unpricedMessage(result.unpriced) };
+  return { ok: true, message: refreshMessage(result) };
 }
 
 async function refresh(connectionId: string): Promise<ConnectionState> {
@@ -110,13 +115,13 @@ async function refresh(connectionId: string): Promise<ConnectionState> {
     const stored = await getSecret(db, secretName(conn.id));
     if (!stored) throw new Error("Saved credentials are missing. Remove this connection and add it again.");
     const exchange = await createExchange(conn.exchange, JSON.parse(stored) as ExchangeCredentials);
-    const { positions, unpriced } = await fetchPositions(exchange);
-    replaceHoldings(conn.accountId, positions);
+    const result = await fetchPositions(exchange);
+    replaceHoldings(conn.accountId, result.positions);
     db.update(connections)
       .set({ status: "ok", lastError: null, lastRefreshedAt: new Date() })
       .where(eq(connections.id, conn.id))
       .run();
-    return { ok: true, message: unpricedMessage(unpriced) };
+    return { ok: true, message: refreshMessage(result) };
   } catch (err) {
     const error = describeError(err);
     db.update(connections).set({ status: "error", lastError: error }).where(eq(connections.id, conn.id)).run();
