@@ -53,6 +53,12 @@ const priceFetch = vi.fn(async (url: string | URL | Request) => {
   return Response.json({});
 }) as unknown as typeof fetch;
 vi.stubGlobal("fetch", priceFetch);
+// Offline stand-in for Coinbase's public tickers: knows BTC only.
+const coinbase = vi.fn(async (symbols: string[]) => new Map(symbols.filter((s) => s === "BTC").map((s) => [s, 60_000])));
+vi.mock("@/lib/wallets/pricing", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/wallets/pricing")>();
+  return { ...mod, priceBalances: (b: ChainBalance[], f?: typeof fetch) => mod.priceBalances(b, f, coinbase) };
+});
 
 const actions = await import("@/lib/wallets/actions");
 const { refreshWallet } = await import("@/lib/wallets");
@@ -176,5 +182,42 @@ describe("removeWallet and RPC settings", () => {
     expect(db.select().from(settings).all().find((s) => s.key === "rpc:base")?.value).toBe("https://a.example\nhttps://b.example");
     await actions.saveRpcUrls({}, form({ chain: "base", urls: "" }));
     expect(db.select().from(settings).all().find((s) => s.key === "rpc:base")).toBeUndefined();
+  });
+});
+
+describe("refreshAllWallets", () => {
+  it("prices every wallet with a single request", async () => {
+    const { refreshAllWallets } = await import("@/lib/wallets");
+    chainBalances.base = [eth(1)];
+    chainBalances.solana = [{ symbol: "SOL", name: "Solana", amount: 1, contract: null, coingeckoId: "solana" }];
+    await actions.addWallet({}, form({ address: ADDRESS, name: "", chains: "base" }));
+    await actions.addWallet({}, form({ address: "sol12345", name: "" }));
+    const mock = priceFetch as unknown as ReturnType<typeof vi.fn>;
+    mock.mockClear();
+    const { results } = await refreshAllWallets(db);
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(mock.mock.calls).toHaveLength(1);
+    expect(String(mock.mock.calls[0][0])).toMatch(/ids=ethereum,solana|ids=solana,ethereum/);
+  });
+
+  it("falls back to a stored price for a new wallet when prices can't be loaded", async () => {
+    const { prices } = await import("@/lib/db/schema");
+    db.insert(prices).values({ symbol: "ETH", kind: "crypto", date: "2026-09-01", price: 1800, currency: "USD", source: "coingecko" }).run();
+    chainBalances.base = [eth(1)];
+    (priceFetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => new Response("", { status: 429 }));
+    await actions.addWallet({}, form({ address: ADDRESS, name: "", chains: "base" }));
+    expect(db.select().from(holdings).get()).toMatchObject({ price: 1800, marketValue: 1800 });
+  });
+});
+
+describe("price fallback", () => {
+  it("uses Coinbase's public prices when CoinGecko is rate-limited", async () => {
+    chainBalances.base = [eth(1), { symbol: "BTC", name: "Bitcoin", amount: 0.5, contract: "0xbtc", coingeckoId: "bitcoin" }];
+    (priceFetch as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => new Response("", { status: 429 }));
+    const res = await actions.addWallet({}, form({ address: ADDRESS, name: "", chains: "base" }));
+    const rows = db.select().from(holdings).all();
+    expect(rows.find((h) => h.symbol === "BTC")).toMatchObject({ price: 60_000, marketValue: 30_000 });
+    expect(rows.find((h) => h.symbol === "ETH")).toMatchObject({ price: null });
+    expect(res.message).toMatch(/Couldn't load all crypto prices/);
   });
 });
