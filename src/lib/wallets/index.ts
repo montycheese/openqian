@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { holdings, settings, wallets, type Wallet } from "@/lib/db/schema";
 import { chainById } from "./chains";
-import { priceBalances, priceKey, type PricedInput } from "./pricing";
+import { priceBalances } from "./pricing";
 import type { ChainAdapter } from "./types";
 
 export const rpcSettingKey = (chainId: string) => `rpc:${chainId}`;
@@ -50,17 +50,32 @@ export async function refreshWallet(db: DB, walletId: string, fetchImpl: typeof 
     return { ok: false, error };
   }
 
-  const items: (PricedInput & { chain: ChainAdapter })[] = results.flatMap((r) =>
-    "balances" in r && r.chain ? r.balances!.map((balance) => ({ balance, platform: r.chain!.coingeckoPlatform, chain: r.chain! })) : [],
+  const items = results.flatMap((r) =>
+    "balances" in r && r.chain ? r.balances!.map((balance) => ({ balance, chain: r.chain! })) : [],
   );
-  const { prices, errors } = await priceBalances(items, fetchImpl);
+  const { prices, errors } = await priceBalances(
+    items.map((i) => i.balance),
+    fetchImpl,
+  );
+
+  // If a price can't be fetched now, keep the last one rather than valuing the asset at $0.
+  const previous = new Map(
+    db
+      .select()
+      .from(holdings)
+      .where(eq(holdings.accountId, wallet.accountId))
+      .all()
+      .filter((h) => h.price !== null)
+      .map((h) => [h.symbol, { price: h.price!, at: h.priceAsOf }]),
+  );
 
   const now = new Date();
-  const rows = items.flatMap(({ balance, platform, chain }) => {
-    const key = priceKey({ balance, platform });
-    const price = key ? (prices.get(key) ?? null) : null;
-    // Tokens outside the curated lists that CoinGecko doesn't know are almost always spam airdrops.
-    if (!balance.coingeckoId && price === null) return [];
+  const rows = items.flatMap(({ balance, chain }) => {
+    // Only curated tokens are tracked; anything else at the address is almost always a spam airdrop.
+    if (!balance.coingeckoId) return [];
+    const fresh = prices.get(balance.coingeckoId);
+    const last = previous.get(balance.symbol);
+    const price = fresh ?? last?.price ?? null;
     const multiChain = walletChains(wallet).length > 1;
     return [
       {
@@ -75,7 +90,7 @@ export async function refreshWallet(db: DB, walletId: string, fetchImpl: typeof 
         marketValue: price === null ? 0 : balance.amount * price,
         currency: "USD",
         priceSource: "feed" as const,
-        priceAsOf: price === null ? null : now,
+        priceAsOf: fresh !== undefined ? now : (last?.at ?? null),
       },
     ];
   });

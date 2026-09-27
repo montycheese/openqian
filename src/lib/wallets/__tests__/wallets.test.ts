@@ -50,7 +50,6 @@ vi.mock("@/lib/wallets/chains", () => {
 const priceFetch = vi.fn(async (url: string | URL | Request) => {
   const u = String(url);
   if (u.includes("/simple/price")) return Response.json({ ethereum: { usd: 2000 }, solana: { usd: 150 } });
-  if (u.includes("0xknown")) return Response.json({ "0xknown": { usd: 3 } });
   return Response.json({});
 }) as unknown as typeof fetch;
 vi.stubGlobal("fetch", priceFetch);
@@ -128,13 +127,32 @@ describe("refreshWallet", () => {
     expect(db.select().from(wallets).get()).toMatchObject({ status: "error", lastError: "Couldn't reach Base RPC endpoints" });
   });
 
-  it("drops unknown unpriced tokens (spam) but keeps ones CoinGecko prices by contract", async () => {
+  it("ignores tokens outside the curated lists (spam airdrops) without extra price lookups", async () => {
     chainBalances.base = [
       { symbol: "SCAM", name: "Claim reward", amount: 1e6, contract: "0xspam", coingeckoId: null },
-      { symbol: "KNOWN", name: "Known", amount: 10, contract: "0xknown", coingeckoId: null },
+      eth(1),
     ];
+    (priceFetch as unknown as ReturnType<typeof vi.fn>).mockClear();
     await actions.addWallet({}, form({ address: ADDRESS, name: "", chains: "base" }));
-    expect(db.select().from(holdings).all().map((h) => [h.symbol, h.marketValue])).toEqual([["KNOWN", 30]]);
+    expect(db.select().from(holdings).all().map((h) => [h.symbol, h.marketValue])).toEqual([["ETH", 2000]]);
+    expect((priceFetch as unknown as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
+  it("keeps the last known price when prices can't be loaded", async () => {
+    chainBalances.base = [eth(1)];
+    const mock = priceFetch as unknown as ReturnType<typeof vi.fn>;
+    mock.mockImplementationOnce(async () => new Response("", { status: 429 }));
+    const first = await actions.addWallet({}, form({ address: ADDRESS, name: "", chains: "base" }));
+    expect(first.message).toMatch(/rate limit/);
+    expect(db.select().from(holdings).get()).toMatchObject({ quantity: 1, price: null, marketValue: 0 });
+
+    const wallet = db.select().from(wallets).get()!;
+    await refreshWallet(db, wallet.id); // prices available: ETH = $2,000
+    chainBalances.base = [eth(2)];
+    mock.mockImplementationOnce(async () => new Response("", { status: 429 }));
+    const res = await refreshWallet(db, wallet.id);
+    expect(res.message).toMatch(/rate limit/);
+    expect(db.select().from(holdings).get()).toMatchObject({ quantity: 2, price: 2000, marketValue: 4000 });
   });
 
   it("tries user-configured RPC endpoints before the defaults", async () => {
