@@ -21,7 +21,7 @@ export type ExchangePosition = {
 };
 
 const FIAT = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "SGD", "HKD"]);
-const USD_STABLECOINS = new Set(["USDC", "USDT", "DAI", "PYUSD", "GUSD", "USDP", "FDUSD", "USDS"]);
+export const USD_STABLECOINS = new Set(["USDC", "USDT", "DAI", "PYUSD", "GUSD", "USDP", "FDUSD", "USDS"]);
 const QUOTES = ["USD", "USDC", "USDT"];
 
 /** Pasted private keys often arrive with literal "\n" sequences instead of newlines. */
