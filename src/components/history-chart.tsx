@@ -37,7 +37,7 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
         margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
         accessibilityLayer
       >
-        <CartesianGrid vertical={false} stroke="var(--border)" />
+        <CartesianGrid vertical={false} stroke="#d8c49a" strokeDasharray="2 4" />
         <XAxis
           dataKey="t"
           type="number"
@@ -70,12 +70,15 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
         <Area
           dataKey="value"
           type={step ? "stepAfter" : "monotone"}
-          stroke="var(--accent)"
-          strokeWidth={2}
-          fill="var(--accent)"
-          fillOpacity={0.1}
+          // Ink brush stroke on paper; the active point is a red seal dot.
+          stroke="var(--ink)"
+          strokeWidth={3.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="var(--ink)"
+          fillOpacity={0.05}
           baseValue="dataMin"
-          activeDot={{ r: 4, fill: "var(--accent)", stroke: "var(--surface)", strokeWidth: 2 }}
+          activeDot={{ r: 5, fill: "#c0392b", stroke: "var(--surface)", strokeWidth: 2 }}
           dot={false}
           isAnimationActive={false}
         />

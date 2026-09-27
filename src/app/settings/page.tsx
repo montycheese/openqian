@@ -21,7 +21,7 @@ export default async function SettingsPage() {
     getRpcOverrides(),
   ]);
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-xl font-semibold">Settings</h1>
 
       <section className="card p-5">

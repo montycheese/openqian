@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "smoke": "node scripts/smoke.mjs",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm smoke"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm smoke",
+    "demo": "node scripts/demo.mjs"
   },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.0",

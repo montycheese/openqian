@@ -6,7 +6,7 @@ import { getBaseCurrency, listCategories } from "@/lib/queries";
 export default async function NewAccountPage() {
   const [categories, baseCurrency] = await Promise.all([listCategories(), getBaseCurrency()]);
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <h1 className="text-xl font-semibold">Add account</h1>
       <div className="card p-5">
         <ActionForm action={createAccount} submitLabel="Create account">

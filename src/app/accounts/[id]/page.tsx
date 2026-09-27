@@ -18,13 +18,15 @@ import {
 } from "@/lib/actions";
 import { refreshConnection } from "@/lib/connections/actions";
 import { EXCHANGE_LABELS } from "@/lib/connections/exchange";
-import { holdingTypes, type Account, type Holding, type Valuation } from "@/lib/db/schema";
+import { holdingTypes, type Account, type Category, type Holding, type Valuation } from "@/lib/db/schema";
 import { HistoryCard } from "@/components/history-card";
 import { parseRange, pointsSince, rangeHref, valuationSeries, type ChartPoint } from "@/lib/chart";
 import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney, formatNumber } from "@/lib/money";
 import { Sensitive } from "@/components/sensitive";
-import { getAccountDetail, getAccountSeries, listCategories } from "@/lib/queries";
+import { getAccountDetail, getAccountSeries, getNetWorth, listCategories } from "@/lib/queries";
+import { Seal, Tile, type Face } from "@/components/treasury";
+import { CATEGORY_ZH, gradeFor } from "@/lib/treasury";
 
 export default async function AccountPage({ params, searchParams }: PageProps<"/accounts/[id]">) {
   const { id } = await params;
@@ -34,100 +36,117 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
   const { account, category, history, positions, summary, baseCurrency, link, wallet, lastImport } = detail;
   const isDebt = category.kind === "debt";
   const chart = await accountChart(account, history, baseCurrency, range);
+  const { assets: totalAssets } = await getNetWorth();
 
   return (
-    <div className="space-y-6">
-      <section className="card p-5">
-        <p className="text-sm text-muted">
-          {[category.name, account.institution].filter(Boolean).join(" · ")}
-        </p>
-        <h1 className="mt-1 text-xl font-semibold">{account.name}</h1>
-        <div className="mt-3 text-2xl font-semibold">
-          <Amount
-            base={summary.base}
-            baseCurrency={baseCurrency}
-            native={summary.native}
-            negative={isDebt}
-            unconverted={summary.missingRates.length > 0 && summary.base === 0}
-          />
-        </div>
-        <p className="mt-1 text-xs text-muted">
-          {summary.isEmpty ? "No value yet" : `As of ${summary.asOf}`}
-          {account.isExcluded && " · excluded from net worth"}
-          {account.isHidden && " · hidden"}
-        </p>
-        {link && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-            <span className={link.status === "ok" ? "text-muted" : "text-negative"}>
-              {link.status === "ok"
-                ? `Synced from ${EXCHANGE_LABELS[link.exchange]}${link.lastRefreshedAt ? ` · ${link.lastRefreshedAt.toLocaleString("en-US")}` : ""}`
-                : link.lastError}
-            </span>
-            <ActionForm action={refreshConnection} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
-              <input type="hidden" name="id" value={link.id} />
-            </ActionForm>
+    <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+      <div className="space-y-5">
+        <Link href="/" className="text-sm no-underline hover:underline">
+          ← Dashboard
+        </Link>
+        <section className="card relative p-5">
+          {lastImport && !link && <Seal title="Filled from an imported statement" className="absolute top-3 right-3" />}
+          <p className="pr-10 text-sm text-muted">
+            {category.name} {CATEGORY_ZH[category.name] && <span className="brush text-lacquer">{CATEGORY_ZH[category.name]}</span>}
+            {account.institution && ` · ${account.institution}`}
+          </p>
+          <h1 className="mt-1 pr-10 text-2xl font-bold">{account.name}</h1>
+          <div className="mt-3 text-3xl font-bold">
+            <Amount
+              base={summary.base}
+              baseCurrency={baseCurrency}
+              native={summary.native}
+              negative={isDebt}
+              unconverted={summary.missingRates.length > 0 && summary.base === 0}
+            />
           </div>
-        )}
-        {wallet && (
-          <div className="mt-3 space-y-2 text-sm">
-            <p className="break-all font-mono text-xs text-muted">{wallet.address}</p>
-            <p className="flex flex-wrap gap-x-3 gap-y-1">
-              {walletChains(wallet).map((id) => {
-                const chain = chainById(id);
-                return chain ? (
-                  <a key={id} href={chain.explorerUrl(wallet.address)} target="_blank" rel="noreferrer" className="underline">
-                    {chain.label} ↗
-                  </a>
-                ) : null;
-              })}
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={wallet.status === "ok" ? "text-muted" : "text-negative"}>
-                {wallet.status === "ok"
-                  ? wallet.lastRefreshedAt
-                    ? `Updated ${wallet.lastRefreshedAt.toLocaleString("en-US")}`
-                    : "Not loaded yet"
-                  : wallet.lastError}
+          <p className="mt-1 text-xs text-muted">
+            {summary.isEmpty ? "No value yet" : `As of ${summary.asOf}`}
+            {account.isExcluded && " · excluded from net worth"}
+            {account.isHidden && " · hidden"}
+          </p>
+          {link && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <span className={link.status === "ok" ? "text-muted" : "text-negative"}>
+                {link.status === "ok"
+                  ? `Synced from ${EXCHANGE_LABELS[link.exchange]}${link.lastRefreshedAt ? ` · ${link.lastRefreshedAt.toLocaleString("en-US")}` : ""}`
+                  : link.lastError}
               </span>
-              <ActionForm action={refreshWalletAction} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
-                <input type="hidden" name="id" value={wallet.id} />
+              <ActionForm action={refreshConnection} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
+                <input type="hidden" name="id" value={link.id} />
               </ActionForm>
             </div>
-          </div>
-        )}
-        {lastImport && !link && (
-          <p className="mt-3 text-sm text-muted">
-            Imported from {lastImport.fileName} (as of {lastImport.asOf}) ·{" "}
-            <Link href="/import" className="underline">
-              Import a newer file
-            </Link>
-          </p>
-        )}
-        {summary.missingRates.length > 0 && (
-          <p className="mt-3 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
-            No exchange rate yet for {summary.missingRates.join(", ")}.
-          </p>
-        )}
-      </section>
+          )}
+          {wallet && (
+            <div className="mt-3 space-y-2 text-sm">
+              <p className="break-all font-mono text-xs text-muted">{wallet.address}</p>
+              <p className="flex flex-wrap gap-x-3 gap-y-1">
+                {walletChains(wallet).map((id) => {
+                  const chain = chainById(id);
+                  return chain ? (
+                    <a key={id} href={chain.explorerUrl(wallet.address)} target="_blank" rel="noreferrer" className="underline">
+                      {chain.label} ↗
+                    </a>
+                  ) : null;
+                })}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={wallet.status === "ok" ? "text-muted" : "text-negative"}>
+                  {wallet.status === "ok"
+                    ? wallet.lastRefreshedAt
+                      ? `Updated ${wallet.lastRefreshedAt.toLocaleString("en-US")}`
+                      : "Not loaded yet"
+                    : wallet.lastError}
+                </span>
+                <ActionForm action={refreshWalletAction} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
+                  <input type="hidden" name="id" value={wallet.id} />
+                </ActionForm>
+              </div>
+            </div>
+          )}
+          {lastImport && !link && (
+            <p className="mt-3 text-sm text-muted">
+              Imported from {lastImport.fileName} (as of {lastImport.asOf}) ·{" "}
+              <Link href="/import" className="underline">
+                Import a newer file
+              </Link>
+            </p>
+          )}
+          {summary.missingRates.length > 0 && (
+            <p className="mt-3 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
+              No exchange rate yet for {summary.missingRates.join(", ")}.
+            </p>
+          )}
+        </section>
+        <AccountSettings account={account} categories={categories} />
+      </div>
 
-      {chart && (
-        <HistoryCard
-          title="Value over time"
-          currency={chart.currency}
-          points={chart.points}
-          range={range}
-          hrefFor={(r) => rangeHref(`/accounts/${account.id}`, {}, r)}
-          step={account.kind === "value"}
-          invert={isDebt}
-        />
-      )}
+      <div className="min-w-0 space-y-5">
+        {chart && (
+          <HistoryCard
+            title="Value over time"
+            currency={chart.currency}
+            points={chart.points}
+            range={range}
+            hrefFor={(r) => rangeHref(`/accounts/${account.id}`, {}, r)}
+            step={account.kind === "value"}
+            invert={isDebt}
+          />
+        )}
 
-      {account.kind === "value" ? (
-        <ValueSection account={account} history={history} />
-      ) : (
-        <HoldingsSection account={account} positions={positions} />
-      )}
+        {account.kind === "value" ? (
+          <ValueSection account={account} history={history} />
+        ) : (
+          <HoldingsSection account={account} positions={positions} totalAssets={totalAssets} />
+        )}
+      </div>
+    </div>
+  );
+}
 
+function AccountSettings({ account, categories }: { account: Account; categories: Category[] }) {
+  return (
+    <>
       <details className="card p-5">
         <summary className="cursor-pointer font-medium">Edit account</summary>
         <div className="mt-4">
@@ -161,7 +180,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
           </ActionForm>
         </div>
       </details>
-    </div>
+    </>
   );
 }
 
@@ -282,17 +301,27 @@ function HoldingFields({ account, holding }: { account: Account; holding?: Holdi
   );
 }
 
-function HoldingsSection({ account, positions }: { account: Account; positions: Holding[] }) {
+function holdingFace(type: Holding["type"]): Face {
+  return type === "cash" ? "coin" : type === "crypto" ? "jade" : type === "bond" ? "seal" : "paper";
+}
+
+function HoldingsSection({ account, positions, totalAssets }: { account: Account; positions: Holding[]; totalAssets: number }) {
   return (
-    <section className="card overflow-hidden">
-      <h2 className="border-b border-border px-4 py-3 font-medium">Holdings</h2>
-      {positions.length === 0 && <p className="px-4 py-3 text-sm text-muted">No holdings yet.</p>}
-      <ul className="divide-y divide-border">
+    <section className="lacquer overflow-hidden p-3">
+      <div className="flex items-baseline justify-between px-1 pb-2">
+        <h2 className="font-bold">Holdings</h2>
+        <span className="text-xs text-[#e7c9a0]">
+          {positions.length} position{positions.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      {positions.length === 0 && <p className="paper px-3 py-3 text-sm text-muted">No holdings yet.</p>}
+      <ul className="space-y-1.5">
         {positions.map((h) => (
           <li key={h.id}>
             <details>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-background">
-                <span className="min-w-0">
+              <summary className="paper flex cursor-pointer list-none items-center gap-3 px-2.5 py-2 hover:bg-[#fffaf0]">
+                <Tile label={(h.symbol ?? h.name).slice(0, 5)} face={holdingFace(h.type)} gradeColor={gradeFor(h.marketValue, totalAssets).color} size={44} />
+                <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium">{h.symbol ?? h.name}</span>
                     {h.network && <NetworkBadge network={h.network} />}
@@ -309,7 +338,7 @@ function HoldingsSection({ account, positions }: { account: Account; positions: 
                   <Sensitive>{formatMoney(h.marketValue, h.currency)}</Sensitive>
                 </span>
               </summary>
-              <div className="space-y-3 border-t border-border bg-background px-4 py-4">
+              <div className="paper mt-1 space-y-3 px-4 py-4">
                 <ActionForm action={saveHolding} submitLabel="Save holding" successMessage="Saved">
                   <HoldingFields account={account} holding={h} />
                 </ActionForm>
@@ -324,9 +353,9 @@ function HoldingsSection({ account, positions }: { account: Account; positions: 
           </li>
         ))}
       </ul>
-      <details className="border-t border-border">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-accent">+ Add holding</summary>
-        <div className="px-4 pb-4">
+      <details className="mt-2">
+        <summary className="cursor-pointer px-1 py-2 text-sm font-semibold text-gold-light">+ Add holding</summary>
+        <div className="paper px-4 py-4">
           <ActionForm action={saveHolding} submitLabel="Add holding" successMessage="Holding added" resetOnSuccess>
             <HoldingFields account={account} />
           </ActionForm>

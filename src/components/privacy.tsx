@@ -30,7 +30,7 @@ export function PrivacyToggle({ withLabel = false }: { withLabel?: boolean }) {
       aria-pressed={enabled}
       aria-label={withLabel ? undefined : label}
       title={label}
-      className={withLabel ? "btn" : "rounded-md px-2 py-2 text-muted hover:text-foreground"}
+      className={withLabel ? "btn" : "rounded px-2 py-2 text-[#e7c9a0] hover:text-gold-light"}
     >
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="inline-block align-[-3px]">
         <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />

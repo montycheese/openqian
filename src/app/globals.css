@@ -1,35 +1,28 @@
 @import "tailwindcss";
 
 :root {
+  /* Jade Treasury: rice paper, red lacquer, gold trim, jade. Light only. */
   color-scheme: light;
-  --background: #f7f7f5;
-  --surface: #ffffff;
-  --foreground: #1a1a1a;
-  --muted: #6b6b6b;
-  --border: #e4e4e0;
-  --accent: #1f5f4a;
-  --accent-fg: #ffffff;
-  --positive: #1f7a4d;
-  --negative: #b3261e;
-  --warning-bg: #fff4d6;
-  --warning-fg: #6b4e00;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: #111312;
-    --surface: #1a1c1b;
-    --foreground: #ececea;
-    --muted: #9a9a96;
-    --border: #2c2f2d;
-    --accent: #5fbf98;
-    --accent-fg: #0d1a14;
-    --positive: #5fbf98;
-    --negative: #ff8a80;
-    --warning-bg: #3a3000;
-    --warning-fg: #ffe08a;
-  }
+  --background: #ebe2cc;
+  --surface: rgba(250, 244, 230, 0.94);
+  --foreground: #2a1a12;
+  --muted: #6e5236;
+  --border: #b08a3a;
+  --accent: #9b1c1c;
+  --accent-fg: #fff3e0;
+  --positive: #2b6e46;
+  --negative: #9b1c1c;
+  --warning-bg: #f6e3b4;
+  --warning-fg: #5c3b0a;
+  --gold: #d4a84b;
+  --gold-light: #f8e7b0;
+  --gold-deep: #7a5a10;
+  --lacquer: #7a1616;
+  --lacquer-deep: #561010;
+  --ink: #2a1a12;
+  --jade: #0f7a4f;
+  --font-serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "SimSun", Georgia, "Times New Roman", serif;
+  --font-brush: "Kaiti SC", "STKaiti", "KaiTi", "Noto Serif CJK SC", serif;
 }
 
 @theme inline {
@@ -44,13 +37,30 @@
   --color-negative: var(--negative);
   --color-warning-bg: var(--warning-bg);
   --color-warning-fg: var(--warning-fg);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-deep: var(--gold-deep);
+  --color-lacquer: var(--lacquer);
+  --color-lacquer-deep: var(--lacquer-deep);
+  --color-ink: var(--ink);
+  --color-jade: var(--jade);
+  --font-sans: var(--font-serif);
+  --font-brush: var(--font-brush);
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
+  /* Rice paper with faint ink-wash mountains and a red sun. */
+  background-color: var(--background);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 400' preserveAspectRatio='none'%3E%3Cpath d='M0 180 C120 90 200 130 290 60 C360 10 420 80 500 40 C600 -10 660 70 760 20 C860 -30 930 50 1040 0 C1120 -35 1200 20 1280 -10 L1280 400 L0 400 Z' fill='%232a2a2a' opacity='0.06'/%3E%3Cpath d='M0 270 C140 200 240 250 360 200 C480 150 560 220 700 180 C820 145 900 220 1030 180 C1130 150 1210 200 1280 180 L1280 400 L0 400 Z' fill='%232a2a2a' opacity='0.08'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 88% 14%, rgba(192, 57, 43, 0.1) 0 70px, transparent 71px),
+    linear-gradient(180deg, #f5eedc 0%, #ebe2cc 60%, #dfd2b4 100%);
+  background-repeat: no-repeat;
+  background-position: bottom center, 0 0, 0 0;
+  background-size: 100% 45vh, 100% 100%, 100% 100%;
+  background-attachment: fixed;
 }
 
 /* Private mode: numbers wrapped in <Sensitive> are replaced by asterisks. */
@@ -72,7 +82,24 @@ html[data-private] input[type="number"]:not(:focus) {
 }
 
 @utility card {
-  @apply rounded-xl border border-border bg-surface;
+  @apply rounded-md border-2 border-border bg-surface;
+  box-shadow: inset 0 0 0 3px rgb(212 168 75 / 0.16), 0 4px 12px rgb(60 20 10 / 0.12);
+}
+
+/* Red lacquer panel with gold trim; text on it uses gold-light. */
+@utility lacquer {
+  @apply rounded-md border-2 border-gold text-gold-light;
+  background: linear-gradient(180deg, var(--lacquer), var(--lacquer-deep));
+  box-shadow: inset 0 0 0 2px #3e0a0a, 0 6px 14px rgb(60 20 10 / 0.25);
+}
+
+/* Paper row inside a lacquer panel. */
+@utility paper {
+  @apply rounded bg-surface text-foreground;
+}
+
+@utility brush {
+  font-family: var(--font-brush);
 }
 
 @utility label {
@@ -80,15 +107,19 @@ html[data-private] input[type="number"]:not(:focus) {
 }
 
 @utility input {
-  @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground outline-none focus:border-accent;
+  @apply w-full rounded border-2 border-border bg-[#fffaf0] px-3 py-2 text-base text-foreground outline-none focus:border-accent;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center rounded border-2 border-border bg-transparent px-4 py-2 text-sm font-semibold text-foreground hover:bg-[#fffaf0] disabled:opacity-50;
 }
 
 @utility btn-primary {
-  @apply btn border-accent bg-accent text-accent-fg hover:bg-accent hover:opacity-90;
+  @apply btn border-gold-deep text-lacquer;
+  background: linear-gradient(var(--gold-light), var(--gold));
+  &:hover {
+    background: linear-gradient(#fff3c4, var(--gold));
+  }
 }
 
 @utility btn-danger {
