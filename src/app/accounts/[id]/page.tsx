@@ -14,15 +14,20 @@ import {
 import { refreshConnection } from "@/lib/connections/actions";
 import { EXCHANGE_LABELS } from "@/lib/connections/exchange";
 import { holdingTypes, type Account, type Holding, type Valuation } from "@/lib/db/schema";
+import { HistoryCard } from "@/components/history-card";
+import { parseRange, pointsSince, rangeHref, valuationSeries, type ChartPoint } from "@/lib/chart";
+import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney, formatNumber } from "@/lib/money";
-import { getAccountDetail, listCategories } from "@/lib/queries";
+import { getAccountDetail, getAccountSeries, listCategories } from "@/lib/queries";
 
-export default async function AccountPage({ params }: PageProps<"/accounts/[id]">) {
+export default async function AccountPage({ params, searchParams }: PageProps<"/accounts/[id]">) {
   const { id } = await params;
+  const range = parseRange((await searchParams).range);
   const [detail, categories] = await Promise.all([getAccountDetail(id), listCategories()]);
   if (!detail) notFound();
   const { account, category, history, positions, summary, baseCurrency, link, lastImport } = detail;
   const isDebt = category.kind === "debt";
+  const chart = await accountChart(account, history, baseCurrency, range);
 
   return (
     <div className="space-y-6">
@@ -72,6 +77,18 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
         )}
       </section>
 
+      {chart && (
+        <HistoryCard
+          title="Value over time"
+          currency={chart.currency}
+          points={chart.points}
+          range={range}
+          hrefFor={(r) => rangeHref(`/accounts/${account.id}`, {}, r)}
+          step={account.kind === "value"}
+          invert={isDebt}
+        />
+      )}
+
       {account.kind === "value" ? (
         <ValueSection account={account} history={history} />
       ) : (
@@ -113,6 +130,27 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
       </details>
     </div>
   );
+}
+
+/**
+ * Chart data for an account, or null with under two data points in all history.
+ * Value accounts use their dated valuations (native currency); holdings
+ * accounts use daily snapshots (base currency).
+ */
+async function accountChart(
+  account: Account,
+  valuations: Valuation[],
+  baseCurrency: string,
+  range: HistoryRange,
+): Promise<{ currency: string; points: ChartPoint[] } | null> {
+  const start = rangeStart(range);
+  if (account.kind === "value") {
+    const today = new Date().toISOString().slice(0, 10);
+    const s = valuationSeries(valuations, { start, today });
+    return s.currency && s.observations >= 2 ? { currency: s.currency, points: s.points } : null;
+  }
+  const all = await getAccountSeries(account.id, baseCurrency);
+  return all.length >= 2 ? { currency: baseCurrency, points: pointsSince(all, start) } : null;
 }
 
 function ValueSection({ account, history }: { account: Account; history: Valuation[] }) {

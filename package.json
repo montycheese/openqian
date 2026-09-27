@@ -23,6 +23,8 @@
     "papaparse": "^5.7.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-is": "19.2.8",
+    "recharts": "^3.10.1",
     "yahoo-finance2": "^4.0.2",
     "zod": "^4.6.5"
   },

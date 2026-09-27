@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, holdings, imports, settings, valuations } from "@/lib/db/schema";
 import { listRates, loadConverter } from "@/lib/fx";
+import type { ChartPoint } from "@/lib/chart";
+import { getAccountHistory, getNetWorthHistory } from "@/lib/history";
 import { DEFAULT_BASE_CURRENCY } from "@/lib/money";
 import { summarizeAccount, summarizeNetWorth } from "@/lib/valuation";
 
@@ -64,4 +66,23 @@ export async function getFxRates() {
 export async function countConnections(): Promise<number> {
   await connection();
   return getDb().select({ n: count() }).from(connections).get()?.n ?? 0;
+}
+
+/** Every net worth snapshot in the base currency, oldest first. */
+export async function getNetWorthSeries(): Promise<{ baseCurrency: string; points: ChartPoint[] }> {
+  const baseCurrency = await getBaseCurrency();
+  const points = getNetWorthHistory(getDb(), { range: "all", baseCurrency }).map((p) => ({
+    date: p.date,
+    value: p.netWorth,
+  }));
+  return { baseCurrency, points };
+}
+
+/** An account's base-currency value in every snapshot, oldest first. */
+export async function getAccountSeries(id: string, baseCurrency: string): Promise<ChartPoint[]> {
+  await connection();
+  return getAccountHistory(getDb(), id, { range: "all", baseCurrency }).map((p) => ({
+    date: p.date,
+    value: p.baseValue,
+  }));
 }
