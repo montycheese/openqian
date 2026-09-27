@@ -16,6 +16,8 @@ export type EvmChainConfig = {
 };
 
 const TIMEOUT_MS = 15_000;
+// tsconfig targets ES2017, which has no bigint literals.
+const ZERO = BigInt(0);
 /** Multicall3, deployed at the same address on every chain we support. */
 export const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
 const BALANCE_OF = "70a08231";
@@ -65,7 +67,7 @@ export function decodeAggregate3(result: string): { success: boolean; returnData
   const elems = arrayStart + 32;
   return Array.from({ length }, (_, i) => {
     const tuple = elems + Number(readWord(elems + i * 32));
-    const success = readWord(tuple) !== 0n;
+    const success = readWord(tuple) !== ZERO;
     const bytesAt = tuple + Number(readWord(tuple + 32));
     const len = Number(readWord(bytesAt));
     const data = hex.slice((bytesAt + 32) * 2, (bytesAt + 32 + len) * 2);
@@ -77,12 +79,12 @@ export function decodeAggregate3(result: string): { success: boolean; returnData
 /** Parses a uint256 return value; empty return data (no contract code) counts as zero. */
 export function decodeUint(hex: string): bigint {
   const h = strip0x(hex);
-  return h.length === 0 ? 0n : BigInt("0x" + h.slice(0, 64));
+  return h.length === 0 ? ZERO : BigInt("0x" + h.slice(0, 64));
 }
 
 /** Converts base units to a human number without float loss before the final step. */
 export function formatUnits(value: bigint, decimals: number): number {
-  const base = 10n ** BigInt(decimals);
+  const base = BigInt(10) ** BigInt(decimals);
   const whole = value / base;
   const frac = (value % base).toString().padStart(decimals, "0");
   return Number(decimals > 0 ? `${whole}.${frac}` : `${whole}`);
@@ -163,7 +165,7 @@ async function fetchFromEndpoint(config: EvmChainConfig, owner: string, url: str
 
   const balances: ChainBalance[] = [];
   const wei = BigInt(nativeHex);
-  if (wei > 0n) {
+  if (wei > ZERO) {
     balances.push({
       symbol: config.nativeSymbol,
       name: config.nativeName,
@@ -184,7 +186,7 @@ async function fetchFromEndpoint(config: EvmChainConfig, owner: string, url: str
       const { success, returnData } = results[i];
       if (!success) return;
       const raw = decodeUint(returnData);
-      if (raw === 0n) return;
+      if (raw === ZERO) return;
       balances.push({
         symbol: token.symbol,
         name: token.name,
