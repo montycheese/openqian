@@ -30,7 +30,7 @@ export function HistoryCard({ title, currency, points, range, hrefFor, step, inv
           <h2 className="text-sm text-muted">{title}</h2>
           {change && (
             <p className="mt-1 text-sm">
-              <span className={`num font-medium ${good === null ? "" : good ? "text-positive" : "text-negative"}`}>
+              <span className={`num font-bold ${good === null ? "" : good ? "text-positive" : "text-negative"}`}>
                 <Sensitive>{formatChange(change, currency)}</Sensitive>
               </span>{" "}
               <span className="text-muted">{RANGE_LABELS[range].long}</span>
@@ -65,7 +65,7 @@ function RangeTabs({ range, hrefFor }: { range: HistoryRange; hrefFor: (range: H
             replace
             aria-current={current ? "true" : undefined}
             aria-label={RANGE_LABELS[r].long[0].toUpperCase() + RANGE_LABELS[r].long.slice(1)}
-            className={`px-2.5 py-1.5 font-medium focus-visible:outline-2 focus-visible:outline-accent ${
+            className={`px-2.5 py-1.5 font-bold focus-visible:outline-2 focus-visible:outline-accent ${
               current ? "bg-accent text-accent-fg" : "text-muted hover:text-foreground"
             }`}
           >

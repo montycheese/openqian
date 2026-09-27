@@ -136,7 +136,7 @@ export function MilestoneCoins({ progress, target, remaining, currency }: { prog
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-bold text-lacquer">Next milestone</span>
+        <span className="font-bold whitespace-nowrap text-lacquer">Next milestone</span>
         <span className="num text-sm text-muted">
           <Sensitive>{formatMoney(target, currency)}</Sensitive>
         </span>

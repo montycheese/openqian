@@ -7,7 +7,7 @@
   --background: #ebe2cc;
   --surface: rgba(250, 244, 230, 0.94);
   --foreground: #2a1a12;
-  --muted: #6e5236;
+  --muted: #57391c;
   --border: #b08a3a;
   --accent: #9b1c1c;
   --accent-fg: #fff3e0;
@@ -49,12 +49,19 @@
   --color-ink: var(--ink);
   --color-jade: var(--jade);
   --font-sans: var(--font-ui);
+  /* Pixel fonts need a little more size than smooth ones at the small end. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.35;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4;
 }
 
 body {
   color: var(--foreground);
   font-family: var(--font-ui);
   font-size: 17px;
+  /* Thin pixel strokes are hard to read: semibold throughout, bold for emphasis. */
+  font-weight: 600;
   -webkit-font-smoothing: none;
   /* Rice paper with stepped pixel mountains and a blocky red sun. */
   background-color: var(--background);
@@ -129,7 +136,7 @@ html[data-private] input[type="number"]:not(:focus) {
 }
 
 @utility label {
-  @apply mb-1 block text-base text-muted;
+  @apply mb-1 block text-base font-semibold text-muted;
 }
 
 @utility input {
@@ -175,5 +182,6 @@ html[data-private] input[type="number"]:not(:focus) {
 @utility num {
   @apply tabular-nums;
   font-family: var(--font-numbers);
+  font-weight: 700;
   letter-spacing: 0.02em;
 }

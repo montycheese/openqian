@@ -5,7 +5,7 @@ All fonts are licensed under the SIL Open Font License 1.1 (license texts alongs
 | File | Font | Notes |
 |---|---|---|
 | `PixelifySans.woff2` | [Pixelify Sans](https://github.com/googlefonts/pixelify-sans) (variable weight) | Interface text. Subset to Latin-1 plus common punctuation and arrows. |
-| `Silkscreen-Regular.woff2` | [Silkscreen](https://github.com/googlefonts/silkscreen) | Numbers. Subset to Latin-1. |
+| `Silkscreen-Regular.woff2`, `Silkscreen-Bold.woff2` | [Silkscreen](https://github.com/googlefonts/silkscreen) | Numbers (bold by default). Subset to Latin-1. |
 | `ZCOOLQingKeHuangYou-subset.woff2` | [ZCOOL QingKe HuangYou](https://github.com/googlefonts/zcool-qingke-huangyou) | Chinese labels. Subset to only the characters the app uses. |
 
 When adding Chinese text, regenerate the subset with every character used in `src/`:

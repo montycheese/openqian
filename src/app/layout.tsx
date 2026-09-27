@@ -16,7 +16,14 @@ export const metadata: Metadata = {
 
 // Bundled pixel fonts (OFL; see src/app/fonts/README.md) — served locally, no font requests.
 const pixel = localFont({ src: "./fonts/PixelifySans.woff2", variable: "--font-pixel", weight: "400 700", display: "swap" });
-const numbers = localFont({ src: "./fonts/Silkscreen-Regular.woff2", variable: "--font-num", display: "swap" });
+const numbers = localFont({
+  src: [
+    { path: "./fonts/Silkscreen-Regular.woff2", weight: "400" },
+    { path: "./fonts/Silkscreen-Bold.woff2", weight: "700" },
+  ],
+  variable: "--font-num",
+  display: "swap",
+});
 const chinese = localFont({ src: "./fonts/ZCOOLQingKeHuangYou-subset.woff2", variable: "--font-cjk", display: "swap" });
 
 const NAV = [

@@ -25,9 +25,9 @@ export default async function SettingsPage() {
       <h1 className="text-xl font-semibold">Settings</h1>
 
       <section className="card p-5">
-        <h2 className="font-medium">Private mode</h2>
+        <h2 className="font-bold">Private mode</h2>
         <p className="mt-1 text-sm text-muted">
-          Replaces balances, quantities, and prices with ***** so you can look at your accounts and holdings in public.
+          Replaces balances, quantities, and prices with <span className="num">*****</span> so you can look at your accounts and holdings in public.
           Also available from the eye button at the top of every page. Remembered in this browser.
         </p>
         <div className="mt-4">
@@ -36,7 +36,7 @@ export default async function SettingsPage() {
       </section>
 
       <section className="card p-5">
-        <h2 className="font-medium">Base currency</h2>
+        <h2 className="font-bold">Base currency</h2>
         <p className="mt-1 text-sm text-muted">Totals are shown in this currency.</p>
         <ActionForm action={setBaseCurrency} submitLabel="Save" successMessage="Saved" className="mt-4 space-y-4">
           <CurrencySelect name="baseCurrency" label="Currency" defaultValue={baseCurrency} />
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div>
-            <h2 className="font-medium">Exchange rates</h2>
+            <h2 className="font-bold">Exchange rates</h2>
             <p className="mt-1 text-sm text-muted">Central bank reference rates via Frankfurter. A manual rate overrides it.</p>
           </div>
           <ActionForm action={refreshFxAction} submitLabel="Refresh rates" submitClassName="btn" successMessage="Rates updated" className="space-y-2" />
@@ -63,7 +63,7 @@ export default async function SettingsPage() {
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="border-b border-border px-4 py-3 font-medium">Categories</h2>
+        <h2 className="border-b border-border px-4 py-3 font-bold">Categories</h2>
         <ul className="divide-y divide-border">
           {categories.map((c) => (
             <li key={c.id}>
@@ -90,7 +90,7 @@ export default async function SettingsPage() {
           ))}
         </ul>
         <details className="border-t border-border">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-accent">+ Add category</summary>
+          <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-accent">+ Add category</summary>
           <div className="px-4 pb-4">
             <ActionForm action={saveCategory} submitLabel="Add category" resetOnSuccess>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +105,7 @@ export default async function SettingsPage() {
 
       <section className="card overflow-hidden">
         <div className="border-b border-border px-4 py-3">
-          <h2 className="font-medium">Blockchain endpoints</h2>
+          <h2 className="font-bold">Blockchain endpoints</h2>
           <p className="mt-1 text-sm text-muted">
             Wallets are read from free public endpoints. Add your own (e.g. a personal node) to use it first.
           </p>

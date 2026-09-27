@@ -187,7 +187,7 @@ function NetWorthHistory({
         <h2 className="text-sm text-muted">Net worth over time</h2>
         {only && (
           <p className="mt-1 text-sm">
-            <span className="num font-medium"><Sensitive>{formatMoney(only.value, currency)}</Sensitive></span>{" "}
+            <span className="num font-bold"><Sensitive>{formatMoney(only.value, currency)}</Sensitive></span>{" "}
             <span className="text-muted">on {formatFullDate(only.date)}</span>
           </p>
         )}

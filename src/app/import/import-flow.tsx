@@ -26,7 +26,7 @@ export function ImportFlow(options: ImportOptions) {
   if (applyState.imported) {
     return (
       <div className="card space-y-3 p-5">
-        <p className="font-medium text-positive">Import complete</p>
+        <p className="font-bold text-positive">Import complete</p>
         <ul className="text-sm">
           {applyState.imported.map((a) => (
             <li key={a.accountId}>
@@ -150,7 +150,7 @@ function Preview({
     <form action={applyAction} className="space-y-4">
       <input type="hidden" name="payload" value={payload} />
       <div className="card space-y-1 p-5 text-sm">
-        <p className="font-medium">{preview.fileName}</p>
+        <p className="font-bold">{preview.fileName}</p>
         <p className="text-muted">
           {[institution, `as of ${holdings?.asOf ?? balances?.asOf}`, `${count} account${count === 1 ? "" : "s"}`]
             .filter(Boolean)
@@ -236,7 +236,7 @@ function Preview({
 function AccountHeader({ name, mask, amount }: { name: string; mask: string | null; amount: string }) {
   return (
     <header className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
-      <span className="min-w-0 truncate font-medium">
+      <span className="min-w-0 truncate font-bold">
         {name || "Account"} {mask && <span className="text-muted">…{mask}</span>}
       </span>
       <span className="num">

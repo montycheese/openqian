@@ -148,7 +148,7 @@ function AccountSettings({ account, categories }: { account: Account; categories
   return (
     <>
       <details className="card p-5">
-        <summary className="cursor-pointer font-medium">Edit account</summary>
+        <summary className="cursor-pointer font-bold">Edit account</summary>
         <div className="mt-4">
           <ActionForm action={updateAccount} submitLabel="Save" successMessage="Saved">
             <input type="hidden" name="id" value={account.id} />
@@ -171,7 +171,7 @@ function AccountSettings({ account, categories }: { account: Account; categories
       </details>
 
       <details className="card p-5">
-        <summary className="cursor-pointer font-medium text-negative">Delete account</summary>
+        <summary className="cursor-pointer font-bold text-negative">Delete account</summary>
         <div className="mt-4">
           <ActionForm action={deleteAccount} submitLabel="Delete permanently" submitClassName="btn-danger">
             <input type="hidden" name="id" value={account.id} />
@@ -210,7 +210,7 @@ function ValueSection({ account, history }: { account: Account; history: Valuati
   return (
     <>
       <section className="card p-5">
-        <h2 className="font-medium">Update value</h2>
+        <h2 className="font-bold">Update value</h2>
         <ActionForm action={addValuation} submitLabel="Add value" successMessage="Value added" resetOnSuccess className="mt-4 space-y-4">
           <input type="hidden" name="accountId" value={account.id} />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -229,7 +229,7 @@ function ValueSection({ account, history }: { account: Account; history: Valuati
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="border-b border-border px-4 py-3 font-medium">History</h2>
+        <h2 className="border-b border-border px-4 py-3 font-bold">History</h2>
         {history.length === 0 ? (
           <p className="px-4 py-3 text-sm text-muted">No values yet.</p>
         ) : (
@@ -331,7 +331,7 @@ function HoldingsSection({ account, positions, totalAssets }: { account: Account
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium">{h.symbol ?? h.name}</span>
+                    <span className="truncate font-bold">{h.symbol ?? h.name}</span>
                     {h.network && <NetworkBadge network={h.network} />}
                   </span>
                   <span className="block truncate text-xs text-muted">

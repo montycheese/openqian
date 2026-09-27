@@ -40,7 +40,7 @@ export default async function ConnectionsPage() {
             <li key={c.id} className="card space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Link href={`/accounts/${a.id}`} className="block truncate font-medium underline-offset-2 hover:underline">
+                  <Link href={`/accounts/${a.id}`} className="block truncate font-bold underline-offset-2 hover:underline">
                     {a.name}
                   </Link>
                   <p className="text-xs text-muted">
@@ -71,7 +71,7 @@ export default async function ConnectionsPage() {
       )}
 
       <section className="card p-5">
-        <h2 className="font-medium">Add an exchange</h2>
+        <h2 className="font-bold">Add an exchange</h2>
         <details className="mt-2 text-sm text-muted">
           <summary className="cursor-pointer">How to create a read-only Coinbase key</summary>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
@@ -120,7 +120,7 @@ export default async function ConnectionsPage() {
               <li key={w.id} className="card space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <Link href={`/accounts/${a.id}`} className="block truncate font-medium underline-offset-2 hover:underline">
+                    <Link href={`/accounts/${a.id}`} className="block truncate font-bold underline-offset-2 hover:underline">
                       {a.name}
                     </Link>
                     <p className="truncate font-mono text-xs text-muted">{w.address}</p>
@@ -154,7 +154,7 @@ export default async function ConnectionsPage() {
         )}
 
         <div className="card p-5">
-          <h3 className="font-medium">Add a wallet</h3>
+          <h3 className="font-bold">Add a wallet</h3>
           <ActionForm action={addWallet} submitLabel="Add wallet" successMessage="Wallet added" resetOnSuccess className="mt-4 space-y-4">
             <Field
               label="Address"
