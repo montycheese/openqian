@@ -102,6 +102,8 @@ export const holdings = sqliteTable(
     marketValue: real("market_value").notNull(),
     currency: text("currency").notNull(),
     costBasis: real("cost_basis"),
+    /** Blockchain the asset is held on (wallet chain id, e.g. "base"); null off-chain. */
+    network: text("network"),
     priceSource: text("price_source", { enum: ["manual", "import", "feed"] })
       .notNull()
       .default("manual"),

@@ -75,7 +75,6 @@ function applyWallet(db: DB, read: Read, fetched: Map<string, number>, priceErro
   const tracked = read.items.filter((i) => i.balance.coingeckoId);
   const fallback = storedPrices(db, [...new Set(tracked.map((i) => i.balance.symbol))]);
   const now = new Date();
-  const multiChain = walletChains(wallet).length > 1;
   const rows = tracked.map(({ balance, chain }) => {
     const fresh = fetched.get(balance.coingeckoId!);
     const last = fallback.get(balance.symbol);
@@ -83,7 +82,8 @@ function applyWallet(db: DB, read: Read, fetched: Map<string, number>, priceErro
     return {
       accountId: wallet.accountId,
       symbol: balance.symbol,
-      name: multiChain ? `${balance.name} · ${chain.label}` : balance.name,
+      name: balance.name,
+      network: chain.id,
       // Holdings have no chain-specific id column; the security-id field holds the token contract.
       cusip: balance.contract,
       type: "crypto" as const,

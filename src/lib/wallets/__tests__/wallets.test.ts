@@ -89,10 +89,11 @@ describe("addWallet", () => {
     expect(account).toMatchObject({ kind: "holdings", source: "connection", institution: "EVM wallet", accountMask: "abab" });
     expect(db.select().from(wallets).get()).toMatchObject({ family: "evm", address: ADDRESS, chains: '["ethereum","base"]' });
     const rows = db.select().from(holdings).all();
-    expect(rows.map((h) => [h.name, h.marketValue]).sort()).toEqual([
-      ["Ether · Base", 1000],
-      ["Ether · Ethereum", 3000],
-      ["USD Coin · Ethereum", 100],
+    // The same token on two chains stays distinguishable by its network.
+    expect(rows.map((h) => [h.symbol, h.network, h.marketValue]).sort()).toEqual([
+      ["ETH", "base", 1000],
+      ["ETH", "ethereum", 3000],
+      ["USDC", "ethereum", 100],
     ]);
     expect(db.select().from(snapshots).all()).toHaveLength(1);
   });

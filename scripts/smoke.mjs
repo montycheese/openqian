@@ -65,6 +65,9 @@ try {
   db.prepare(
     "insert into wallets (id, account_id, family, address, chains) values ('w1', 'smoke-wallet', 'evm', '0x000000000000000000000000000000000000dead', '[\"ethereum\",\"base\"]')",
   ).run();
+  db.prepare(
+    "insert into holdings (id, account_id, symbol, name, type, quantity, price, market_value, currency, network) values ('h-eth-base', 'smoke-wallet', 'ETH', 'Ether', 'crypto', 1, 2000, 2000, 'USD', 'base'), ('h-eth-eth', 'smoke-wallet', 'ETH', 'Ether', 'crypto', 1, 2000, 2000, 'USD', 'ethereum')",
+  ).run();
   const addValue = db.prepare("insert into valuations (id, account_id, date, value, currency) values (?, ?, '2026-01-01', ?, ?)");
   addValue.run("v1", "smoke-value", 100, "USD");
   addValue.run("v2", "smoke-eur", 100, "EUR");
@@ -107,6 +110,7 @@ try {
     ["/accounts/smoke-value?range=all", 'aria-label="Value over time:'],
     ["/accounts/smoke-holdings?range=1y", 'aria-label="Value over time:'],
     ["/accounts/smoke-wallet", "0x000000000000000000000000000000000000dead"],
+    ["/accounts/smoke-wallet", "text-[11px] leading-4 text-muted\">Base</span>"],
     ["/connections", "Add a wallet"],
     ["/settings", "Blockchain endpoints"],
   ];

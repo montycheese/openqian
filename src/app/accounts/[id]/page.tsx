@@ -2,6 +2,7 @@ import Link from "next/link";
 import { walletChains } from "@/lib/wallets";
 import { refreshWalletAction } from "@/lib/wallets/actions";
 import { chainById } from "@/lib/wallets/chains";
+import { NetworkBadge } from "@/components/network-badge";
 import { notFound } from "next/navigation";
 import { localDate } from "@/lib/dates";
 import { ActionForm } from "@/components/action-form";
@@ -292,7 +293,10 @@ function HoldingsSection({ account, positions }: { account: Account; positions: 
             <details>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-background">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{h.symbol ?? h.name}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{h.symbol ?? h.name}</span>
+                    {h.network && <NetworkBadge network={h.network} />}
+                  </span>
                   <span className="block truncate text-xs text-muted">
                     {h.quantity !== null && h.price !== null
                       ? <Sensitive>{`${formatNumber(h.quantity)} × ${formatMoney(h.price, h.currency)}`}</Sensitive>

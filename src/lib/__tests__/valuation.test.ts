@@ -45,6 +45,7 @@ const holding = (accountId: string, marketValue: number, over: Partial<Holding> 
   marketValue,
   currency: "USD",
   costBasis: null,
+  network: null,
   priceSource: "manual",
   priceAsOf: null,
   createdAt: now,
