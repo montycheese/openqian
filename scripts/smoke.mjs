@@ -26,8 +26,8 @@ server.stderr.on("data", (d) => (log += d));
 
 const daysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 
-async function get(route, expectText) {
-  const res = await fetch(base + route);
+async function get(route, expectText, headers = {}) {
+  const res = await fetch(base + route, { headers });
   const body = await res.text();
   const problem =
     res.status !== 200
@@ -51,7 +51,7 @@ try {
     }
   }
   // First request creates and migrates the database; then add sample data.
-  const empty = await Promise.all(["/", "/settings"].map(get));
+  const empty = await Promise.all(["/", "/settings"].map((r) => get(r)));
   const db = new Database(path.join(dataDir, "openchieng.db"));
   const cat = (name) => db.prepare("select id from categories where name = ?").get(name).id;
   const addAccount = db.prepare(
@@ -115,6 +115,9 @@ try {
     ...(await Promise.all(routes.map((r) => get(r)))),
     ...(await Promise.all(charts.map(([r, text]) => get(r, text)))),
   ];
+  // Private mode is read from a cookie on the server so pages render already masked.
+  const privateHome = await get("/", "data-private", { cookie: "oc-private=1" });
+  results.push({ route: "/ (private mode)", problem: privateHome.problem });
   const missing = await get("/accounts/does-not-exist");
   results.push({ route: missing.route, problem: missing.problem === "HTTP 404" ? null : missing.problem ?? "expected 404" });
 

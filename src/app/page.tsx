@@ -7,6 +7,7 @@ import { formatFullDate, parseRange, pointsSince, rangeHref, withLatestPoint, ty
 import { localDate } from "@/lib/dates";
 import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney } from "@/lib/money";
+import { Sensitive } from "@/components/sensitive";
 import { countSyncedSources, getNetWorth, getNetWorthSeries } from "@/lib/queries";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
@@ -26,15 +27,15 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
     <div className="space-y-6">
       <section className="card p-5">
         <p className="text-sm text-muted">Net worth</p>
-        <p className="num mt-1 text-3xl font-semibold sm:text-4xl">{formatMoney(nw.netWorth, cur)}</p>
+        <p className="num mt-1 text-3xl font-semibold sm:text-4xl"><Sensitive>{formatMoney(nw.netWorth, cur)}</Sensitive></p>
         <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-muted">Assets</p>
-            <p className="num font-medium">{formatMoney(nw.assets, cur)}</p>
+            <p className="num font-medium"><Sensitive>{formatMoney(nw.assets, cur)}</Sensitive></p>
           </div>
           <div>
             <p className="text-muted">Debts</p>
-            <p className="num font-medium">{formatMoney(nw.debts, cur)}</p>
+            <p className="num font-medium"><Sensitive>{formatMoney(nw.debts, cur)}</Sensitive></p>
           </div>
         </div>
         {hasAccounts && (
@@ -171,7 +172,7 @@ function NetWorthHistory({
         <h2 className="text-sm text-muted">Net worth over time</h2>
         {only && (
           <p className="mt-1 text-sm">
-            <span className="num font-medium">{formatMoney(only.value, currency)}</span>{" "}
+            <span className="num font-medium"><Sensitive>{formatMoney(only.value, currency)}</Sensitive></span>{" "}
             <span className="text-muted">on {formatFullDate(only.date)}</span>
           </p>
         )}

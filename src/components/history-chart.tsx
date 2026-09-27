@@ -3,6 +3,8 @@
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { dateTicks, formatFullDate, toTime, valueAxis, type ChartPoint } from "@/lib/chart";
+import { usePrivateMode } from "@/components/privacy";
+import { MASK } from "@/components/sensitive";
 import { formatMoney } from "@/lib/money";
 
 type Props = {
@@ -18,6 +20,7 @@ const tick = { fill: "var(--muted)", fontSize: 12 };
 
 /** Single-series area chart of a value over time. Needs at least two points. */
 export function HistoryChart({ points, currency, summary, step }: Props) {
+  const hidden = usePrivateMode();
   const data = points.map((p) => ({ t: toTime(p.date), value: p.value }));
   const { ticks, format } = dateTicks(data[0].t, data[data.length - 1].t);
   const y = valueAxis(
@@ -26,7 +29,7 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
   );
 
   return (
-    <figure className="h-48 w-full sm:h-56" aria-label={summary}>
+    <figure className="h-48 w-full sm:h-56" aria-label={hidden ? "Value over time (amounts hidden in private mode)" : summary}>
       <AreaChart
         responsive
         data={data}
@@ -50,6 +53,7 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
           interval="preserveStartEnd"
         />
         <YAxis
+          hide={hidden}
           width="auto"
           domain={y.domain}
           ticks={y.ticks}
@@ -60,7 +64,7 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
         />
         <Tooltip
           cursor={{ stroke: "var(--muted)", strokeWidth: 1 }}
-          content={(props) => <ChartTooltip {...props} currency={currency} />}
+          content={(props) => <ChartTooltip {...props} currency={currency} hidden={hidden} />}
           isAnimationActive={false}
         />
         <Area
@@ -84,13 +88,14 @@ function ChartTooltip({
   active,
   payload,
   currency,
-}: Pick<TooltipContentProps<ValueType, NameType>, "active" | "payload"> & { currency: string }) {
+  hidden,
+}: Pick<TooltipContentProps<ValueType, NameType>, "active" | "payload"> & { currency: string; hidden: boolean }) {
   const item = payload?.[0];
   if (!active || !item) return null;
   const { t, value } = item.payload as { t: number; value: number };
   return (
     <div className="card px-3 py-2 text-sm shadow-sm">
-      <p className="num font-semibold">{formatMoney(value, currency)}</p>
+      <p className="num font-semibold">{hidden ? MASK : formatMoney(value, currency)}</p>
       <p className="text-xs text-muted">{formatFullDate(t)}</p>
     </div>
   );

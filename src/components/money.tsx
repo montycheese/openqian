@@ -1,3 +1,4 @@
+import { Sensitive } from "@/components/sensitive";
 import { formatMoney } from "@/lib/money";
 
 /** Base-currency amount, with the native amount alongside when it differs. */
@@ -24,12 +25,16 @@ export function Amount({
         </span>
       ) : (
         <span className={negative ? "text-negative" : undefined}>
-          {negative && base !== 0 ? "−" : ""}
-          {formatMoney(base, baseCurrency)}
+          <Sensitive>
+            {negative && base !== 0 ? "−" : ""}
+            {formatMoney(base, baseCurrency)}
+          </Sensitive>
         </span>
       )}
       {showNative && (
-        <span className="block text-xs text-muted">{formatMoney(native.amount, native.currency)}</span>
+        <span className="block text-xs text-muted">
+          <Sensitive>{formatMoney(native.amount, native.currency)}</Sensitive>
+        </span>
       )}
     </span>
   );

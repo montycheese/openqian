@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HistoryChart } from "@/components/history-chart";
+import { Sensitive } from "@/components/sensitive";
 import { computeChange, describeTrend, formatChange, RANGE_LABELS, type ChartPoint } from "@/lib/chart";
 import { HISTORY_RANGES, type HistoryRange } from "@/lib/history";
 
@@ -30,7 +31,7 @@ export function HistoryCard({ title, currency, points, range, hrefFor, step, inv
           {change && (
             <p className="mt-1 text-sm">
               <span className={`num font-medium ${good === null ? "" : good ? "text-positive" : "text-negative"}`}>
-                {formatChange(change, currency)}
+                <Sensitive>{formatChange(change, currency)}</Sensitive>
               </span>{" "}
               <span className="text-muted">{RANGE_LABELS[range].long}</span>
             </p>

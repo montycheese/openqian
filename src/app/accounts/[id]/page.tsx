@@ -22,6 +22,7 @@ import { HistoryCard } from "@/components/history-card";
 import { parseRange, pointsSince, rangeHref, valuationSeries, type ChartPoint } from "@/lib/chart";
 import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney, formatNumber } from "@/lib/money";
+import { Sensitive } from "@/components/sensitive";
 import { getAccountDetail, getAccountSeries, listCategories } from "@/lib/queries";
 
 export default async function AccountPage({ params, searchParams }: PageProps<"/accounts/[id]">) {
@@ -220,7 +221,7 @@ function ValueSection({ account, history }: { account: Account; history: Valuati
                   <span className="block truncate text-xs text-muted">
                     {[
                       v.quantity !== null && v.unitPrice !== null
-                        ? `${formatNumber(v.quantity)} × ${formatMoney(v.unitPrice, v.currency)}`
+                        ? <Sensitive>{`${formatNumber(v.quantity)} × ${formatMoney(v.unitPrice, v.currency)}`}</Sensitive>
                         : null,
                       v.note,
                     ]
@@ -229,7 +230,9 @@ function ValueSection({ account, history }: { account: Account; history: Valuati
                   </span>
                 </span>
                 <span className="flex items-center gap-3">
-                  <span className="num">{formatMoney(v.value, v.currency)}</span>
+                  <span className="num">
+                    <Sensitive>{formatMoney(v.value, v.currency)}</Sensitive>
+                  </span>
                   <form action={deleteValuation}>
                     <input type="hidden" name="id" value={v.id} />
                     <button type="submit" className="text-xs text-muted hover:text-negative" aria-label={`Delete value from ${v.date}`}>
@@ -292,13 +295,15 @@ function HoldingsSection({ account, positions }: { account: Account; positions: 
                   <span className="block truncate font-medium">{h.symbol ?? h.name}</span>
                   <span className="block truncate text-xs text-muted">
                     {h.quantity !== null && h.price !== null
-                      ? `${formatNumber(h.quantity)} × ${formatMoney(h.price, h.currency)}`
+                      ? <Sensitive>{`${formatNumber(h.quantity)} × ${formatMoney(h.price, h.currency)}`}</Sensitive>
                       : h.symbol
                         ? h.name
                         : h.type}
                   </span>
                 </span>
-                <span className="num">{formatMoney(h.marketValue, h.currency)}</span>
+                <span className="num">
+                  <Sensitive>{formatMoney(h.marketValue, h.currency)}</Sensitive>
+                </span>
               </summary>
               <div className="space-y-3 border-t border-border bg-background px-4 py-4">
                 <ActionForm action={saveHolding} submitLabel="Save holding" successMessage="Saved">

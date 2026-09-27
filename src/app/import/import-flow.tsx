@@ -4,6 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 import { applyImport, previewImport, type ImportPreview } from "@/lib/import/actions";
 import { formatMoney, formatNumber } from "@/lib/money";
+import { Sensitive } from "@/components/sensitive";
 
 type Option = { value: string; label: string };
 type Mapping = { target: string; name: string; categoryId: string };
@@ -157,7 +158,7 @@ function Preview({
         </p>
         {holdings?.checksum?.ok && (
           <p className="text-positive">
-            ✓ Positions add up to the file&apos;s total ({formatMoney(holdings.checksum.expected, options.currency)})
+            ✓ Positions add up to the file&apos;s total (<Sensitive>{formatMoney(holdings.checksum.expected, options.currency)}</Sensitive>)
           </p>
         )}
         {warnings.map((w) => (
@@ -175,7 +176,7 @@ function Preview({
             onChange={(p) => patch(setBalanceMaps, i, p)}
             accounts={options.valueAccounts}
             categories={options.allCategories}
-            existingNote={`Adds a balance of ${formatMoney(a.balance, a.currency)} dated ${a.asOf} to this account's history.`}
+            existingNote={`Adds this balance, dated ${a.asOf}, to the account's history.`}
           />
           {a.kind === "credit" && (
             <p className="px-4 pb-4 text-xs text-muted">
@@ -206,11 +207,13 @@ function Preview({
                     <span className="block truncate">{h.symbol ?? h.name}</span>
                     <span className="block truncate text-xs text-muted">
                       {h.quantity !== null && h.price !== null
-                        ? `${formatNumber(h.quantity)} × ${formatMoney(h.price, options.currency)}`
+                        ? <Sensitive>{`${formatNumber(h.quantity)} × ${formatMoney(h.price, options.currency)}`}</Sensitive>
                         : h.type}
                     </span>
                   </span>
-                  <span className="num">{formatMoney(h.marketValue, options.currency)}</span>
+                  <span className="num">
+                    <Sensitive>{formatMoney(h.marketValue, options.currency)}</Sensitive>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -236,7 +239,9 @@ function AccountHeader({ name, mask, amount }: { name: string; mask: string | nu
       <span className="min-w-0 truncate font-medium">
         {name || "Account"} {mask && <span className="text-muted">…{mask}</span>}
       </span>
-      <span className="num">{amount}</span>
+      <span className="num">
+        <Sensitive>{amount}</Sensitive>
+      </span>
     </header>
   );
 }

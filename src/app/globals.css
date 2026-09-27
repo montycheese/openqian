@@ -53,6 +53,24 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Private mode: numbers wrapped in <Sensitive> are replaced by asterisks. */
+html[data-private] .sensitive-value {
+  display: none;
+}
+html[data-private] .sensitive::after {
+  content: "*****";
+}
+/* Gain/loss colors would still reveal direction. */
+html[data-private] .sensitive {
+  color: var(--muted);
+}
+/* Amounts shown in form fields are blurred until the field is focused for editing. */
+html[data-private] input[inputmode="decimal"]:not(:focus),
+html[data-private] input[type="number"]:not(:focus) {
+  color: transparent;
+  text-shadow: 0 0 8px var(--foreground);
+}
+
 @utility card {
   @apply rounded-xl border border-border bg-surface;
 }

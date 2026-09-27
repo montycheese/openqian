@@ -1,4 +1,5 @@
 import { ActionForm } from "@/components/action-form";
+import { PrivacyToggle } from "@/components/privacy";
 import { CurrencySelect, Field, Select } from "@/components/fields";
 import { deleteCategory, saveCategory, setBaseCurrency } from "@/lib/actions";
 import { clearManualRateAction, refreshFxAction, saveManualRate } from "@/lib/fx/actions";
@@ -22,6 +23,17 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">Settings</h1>
+
+      <section className="card p-5">
+        <h2 className="font-medium">Private mode</h2>
+        <p className="mt-1 text-sm text-muted">
+          Replaces balances, quantities, and prices with ***** so you can look at your accounts and holdings in public.
+          Also available from the eye button at the top of every page. Remembered in this browser.
+        </p>
+        <div className="mt-4">
+          <PrivacyToggle withLabel />
+        </div>
+      </section>
 
       <section className="card p-5">
         <h2 className="font-medium">Base currency</h2>
