@@ -17,42 +17,66 @@ export function rangeStart(range: HistoryRange, today = new Date()): string | nu
 }
 
 /**
- * Daily net worth in `baseCurrency`, oldest first.
- * Snapshots taken in another base currency are skipped for now.
+ * Multiplier from a snapshot's base currency into `target`, using the rates
+ * stored with that snapshot (never today's rates), or null when it can't be done.
+ */
+function factorTo(target: string, snapshot: { baseCurrency: string; fxRates: string }): number | null {
+  if (snapshot.baseCurrency === target) return 1;
+  let rates: Record<string, unknown>;
+  try {
+    rates = JSON.parse(snapshot.fxRates) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  // Stored as snapshot-base units per 1 unit of each currency.
+  const perTarget = rates[target];
+  return typeof perTarget === "number" && Number.isFinite(perTarget) && perTarget > 0 ? 1 / perTarget : null;
+}
+
+/**
+ * Daily net worth in `baseCurrency`, oldest first. Snapshots taken in another
+ * base currency are converted with their stored rates, or skipped when they
+ * have no rate for `baseCurrency`.
  */
 export function getNetWorthHistory(db: DB, opts: { range: HistoryRange; baseCurrency: string }): NetWorthPoint[] {
   const start = rangeStart(opts.range);
-  return db
-    .select({ date: snapshots.date, assets: snapshots.assets, debts: snapshots.debts, netWorth: snapshots.netWorth })
+  const rows = db
+    .select()
     .from(snapshots)
-    .where(and(eq(snapshots.baseCurrency, opts.baseCurrency), start ? gte(snapshots.date, start) : undefined))
+    .where(start ? gte(snapshots.date, start) : undefined)
     .orderBy(asc(snapshots.date))
     .all();
+  return rows.flatMap((s) => {
+    const f = factorTo(opts.baseCurrency, s);
+    return f === null ? [] : [{ date: s.date, assets: s.assets * f, debts: s.debts * f, netWorth: s.netWorth * f }];
+  });
 }
 
-/** One account's value per snapshot day, oldest first. */
+/** One account's value per snapshot day, oldest first; base values converted as in getNetWorthHistory. */
 export function getAccountHistory(
   db: DB,
   accountId: string,
   opts: { range: HistoryRange; baseCurrency: string },
 ): AccountPoint[] {
   const start = rangeStart(opts.range);
-  return db
+  const rows = db
     .select({
       date: snapshots.date,
+      baseCurrency: snapshots.baseCurrency,
+      fxRates: snapshots.fxRates,
       baseValue: snapshotAccounts.baseValue,
       nativeValue: snapshotAccounts.nativeValue,
       nativeCurrency: snapshotAccounts.nativeCurrency,
     })
     .from(snapshotAccounts)
     .innerJoin(snapshots, eq(snapshots.id, snapshotAccounts.snapshotId))
-    .where(
-      and(
-        eq(snapshotAccounts.accountId, accountId),
-        eq(snapshots.baseCurrency, opts.baseCurrency),
-        start ? gte(snapshots.date, start) : undefined,
-      ),
-    )
+    .where(and(eq(snapshotAccounts.accountId, accountId), start ? gte(snapshots.date, start) : undefined))
     .orderBy(asc(snapshots.date))
     .all();
+  return rows.flatMap(({ baseCurrency, fxRates, ...p }) => {
+    const f = factorTo(opts.baseCurrency, { baseCurrency, fxRates });
+    if (f !== null) return [{ ...p, baseValue: p.baseValue * f }];
+    // Without a rate, an account held in the requested currency still has an exact value.
+    return p.nativeCurrency === opts.baseCurrency && p.nativeValue !== null ? [{ ...p, baseValue: p.nativeValue }] : [];
+  });
 }

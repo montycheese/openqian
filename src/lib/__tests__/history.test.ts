@@ -5,14 +5,15 @@ import { getAccountHistory, getNetWorthHistory, rangeStart } from "@/lib/history
 
 let db: DB;
 
-function snapshot(date: string, netWorth: number, baseCurrency = "USD") {
+function snapshot(date: string, netWorth: number, baseCurrency = "USD", rates: Record<string, number> = {}, native?: [number, string]) {
   const [row] = db
     .insert(snapshots)
-    .values({ date, baseCurrency, assets: netWorth, debts: 0, netWorth })
+    .values({ date, baseCurrency, assets: netWorth, debts: 0, netWorth, fxRates: JSON.stringify(rates) })
     .returning()
     .all();
+  const [nativeValue, nativeCurrency] = native ?? [netWorth, baseCurrency];
   db.insert(snapshotAccounts)
-    .values({ snapshotId: row.id, accountId: "a1", categoryId: "c", nativeValue: netWorth, nativeCurrency: baseCurrency, baseValue: netWorth, counted: true })
+    .values({ snapshotId: row.id, accountId: "a1", categoryId: "c", nativeValue, nativeCurrency, baseValue: netWorth, counted: true })
     .run();
 }
 
@@ -41,5 +42,29 @@ describe("history queries", () => {
     expect(getNetWorthHistory(db, { range: "1m", baseCurrency: "USD" }).map((p) => p.netWorth)).toEqual([2, 4]);
     expect(getNetWorthHistory(db, { range: "all", baseCurrency: "USD" }).map((p) => p.netWorth)).toEqual([1, 2, 4]);
     expect(getAccountHistory(db, "a1", { range: "all", baseCurrency: "USD" }).map((p) => p.baseValue)).toEqual([1, 2, 4]);
+  });
+
+  it("converts snapshots taken in another base currency with their stored rates", () => {
+    snapshot("2026-01-01", 250, "USD", { EUR: 1.25 }); // 1 EUR = 1.25 USD then
+    snapshot("2026-01-02", 300, "USD", { GBP: 1.5 }); // no EUR rate stored: skipped
+    snapshot("2026-01-03", 220, "EUR");
+
+    expect(getNetWorthHistory(db, { range: "all", baseCurrency: "EUR" })).toEqual([
+      { date: "2026-01-01", assets: 200, debts: 0, netWorth: 200 },
+      { date: "2026-01-03", assets: 220, debts: 0, netWorth: 220 },
+    ]);
+    expect(getNetWorthHistory(db, { range: "all", baseCurrency: "USD" }).map((p) => p.netWorth)).toEqual([250, 300]);
+    expect(getAccountHistory(db, "a1", { range: "all", baseCurrency: "EUR" }).map((p) => [p.date, p.baseValue])).toEqual([
+      ["2026-01-01", 200],
+      ["2026-01-03", 220],
+    ]);
+  });
+
+  it("uses an account's native value when the snapshot has no rate for the requested currency", () => {
+    snapshot("2026-01-01", 300, "USD", {}, [240, "EUR"]);
+    expect(getAccountHistory(db, "a1", { range: "all", baseCurrency: "EUR" })).toEqual([
+      { date: "2026-01-01", baseValue: 240, nativeValue: 240, nativeCurrency: "EUR" },
+    ]);
+    expect(getNetWorthHistory(db, { range: "all", baseCurrency: "EUR" })).toEqual([]);
   });
 });
