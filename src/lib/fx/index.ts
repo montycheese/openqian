@@ -7,6 +7,7 @@ import { DEFAULT_BASE_CURRENCY, type Converter } from "@/lib/money";
 const FRANKFURTER = "https://api.frankfurter.dev/v2";
 
 type Source = FxRate["source"];
+type ApiRate = { date: string; base: string; quote: string; rate: number };
 
 export type RateInfo = {
   currency: string;
@@ -63,20 +64,29 @@ export async function refreshFxRates(
     if (!known.has(base)) return { currencies: [], unsupported: wanted, error: `Frankfurter has no rates for ${base}` };
 
     const supported = wanted.filter((c) => known.has(c));
-    let rows: { date: string; base: string; quote: string; rate: number }[] = [];
+    const valid = (r: ApiRate) => Number.isFinite(r.rate) && r.rate > 0;
+    let rows: ApiRate[] = [];
     if (supported.length > 0) {
-      rows = (await getJson(
-        fetchImpl,
-        `${FRANKFURTER}/rates?base=${base}&quotes=${supported.join(",")}`,
-      )) as typeof rows;
+      const url = `${FRANKFURTER}/rates?base=${base}&quotes=${supported.join(",")}`;
+      rows = ((await getJson(fetchImpl, url)) as ApiRate[]).filter(
+        (r) => r.base === base && supported.includes(r.quote) && valid(r),
+      );
     }
-    rows = rows.filter((r) => r.base === base && supported.includes(r.quote) && Number.isFinite(r.rate) && r.rate > 0);
+    // Rates are rounded to 5 decimals (1 USD = 0.00023 XAU), so small ones are
+    // refetched the other way round (1 XAU = 4276.51 USD) to keep precision.
+    rows = await Promise.all(
+      rows.map(async (r) => {
+        if (r.rate >= 0.1) return r;
+        const inverse = (await getJson(fetchImpl, `${FRANKFURTER}/rate/${r.quote}/${base}`)) as ApiRate;
+        return inverse.base === r.quote && inverse.quote === base && valid(inverse) ? inverse : r;
+      }),
+    );
 
     const fetchedAt = new Date();
     db.transaction((tx) => {
       for (const r of rows) {
         tx.insert(fxRates)
-          .values({ date: r.date, base, quote: r.quote, rate: r.rate, source: "frankfurter", fetchedAt })
+          .values({ date: r.date, base: r.base, quote: r.quote, rate: r.rate, source: "frankfurter", fetchedAt })
           .onConflictDoUpdate({
             target: [fxRates.date, fxRates.base, fxRates.quote, fxRates.source],
             set: { rate: r.rate, fetchedAt },
@@ -84,7 +94,7 @@ export async function refreshFxRates(
           .run();
       }
     });
-    const got = new Set(rows.map((r) => r.quote));
+    const got = new Set(rows.map((r) => (r.base === base ? r.quote : r.base)));
     return { currencies: wanted.filter((c) => got.has(c)), unsupported: wanted.filter((c) => !got.has(c)) };
   } catch (err) {
     return { currencies: [], unsupported: [], error: err instanceof Error ? err.message : String(err) };

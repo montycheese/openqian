@@ -97,11 +97,13 @@ describe("listRates", () => {
 });
 
 describe("refreshFxRates", () => {
-  const currencies = [{ iso_code: "USD" }, { iso_code: "EUR" }, { iso_code: "GBP" }];
+  const currencies = [{ iso_code: "USD" }, { iso_code: "EUR" }, { iso_code: "GBP" }, { iso_code: "XAU" }];
   function mockFetch(rates: Record<string, number>, date = "2026-09-25") {
     return vi.fn(async (url: string | URL | Request) => {
       const u = new URL(String(url));
       if (u.pathname.endsWith("/currencies")) return Response.json(currencies);
+      const pair = u.pathname.match(/\/rate\/(\w+)\/(\w+)$/);
+      if (pair) return Response.json({ date, base: pair[1], quote: pair[2], rate: 4276.51 });
       const base = u.searchParams.get("base")!;
       const quotes = u.searchParams.get("quotes")!.split(",");
       return Response.json(quotes.map((quote) => ({ date, base, quote, rate: rates[quote] })));
@@ -118,16 +120,25 @@ describe("refreshFxRates", () => {
   it("stores rates idempotently and reports unsupported currencies", async () => {
     account("EUR");
     account("GBP");
-    account("XAU");
+    account("XYZ");
     const fetchImpl = mockFetch({ EUR: 0.8, GBP: 0.75 });
 
-    expect(await refreshFxRates(db, fetchImpl)).toEqual({ currencies: ["EUR", "GBP"], unsupported: ["XAU"] });
+    expect(await refreshFxRates(db, fetchImpl)).toEqual({ currencies: ["EUR", "GBP"], unsupported: ["XYZ"] });
     expect(String(vi.mocked(fetchImpl).mock.calls[1][0])).toBe("https://api.frankfurter.dev/v2/rates?base=USD&quotes=EUR,GBP");
 
     await refreshFxRates(db, mockFetch({ EUR: 0.9, GBP: 0.75 }));
     const rows = db.select().from(fxRates).all();
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.quote === "EUR")).toMatchObject({ base: "USD", rate: 0.9, date: "2026-09-25", source: "frankfurter" });
+  });
+
+  it("refetches small rates inverted to keep precision", async () => {
+    account("XAU");
+    const fetchImpl = mockFetch({ XAU: 0.00023 });
+    expect(await refreshFxRates(db, fetchImpl)).toEqual({ currencies: ["XAU"], unsupported: [] });
+    expect(String(vi.mocked(fetchImpl).mock.calls[2][0])).toBe("https://api.frankfurter.dev/v2/rate/XAU/USD");
+    expect(db.select().from(fxRates).all()).toMatchObject([{ base: "XAU", quote: "USD", rate: 4276.51 }]);
+    expect(loadConverter(db, "USD")(2, "XAU")).toBeCloseTo(8553.02);
   });
 
   it("fetches against the current base currency", async () => {
