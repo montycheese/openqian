@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/action-form";
-import { Checkbox, CurrencySelect, Field, Select } from "@/components/fields";
+import { Checkbox, CurrencySelect, Field, InstitutionField, Select } from "@/components/fields";
 import { Amount } from "@/components/money";
 import {
   addValuation,
@@ -10,6 +11,8 @@ import {
   saveHolding,
   updateAccount,
 } from "@/lib/actions";
+import { refreshConnection } from "@/lib/connections/actions";
+import { EXCHANGE_LABELS } from "@/lib/connections/exchange";
 import { holdingTypes, type Account, type Holding, type Valuation } from "@/lib/db/schema";
 import { formatMoney, formatNumber } from "@/lib/money";
 import { getAccountDetail, listCategories } from "@/lib/queries";
@@ -18,7 +21,7 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
   const { id } = await params;
   const [detail, categories] = await Promise.all([getAccountDetail(id), listCategories()]);
   if (!detail) notFound();
-  const { account, category, history, positions, summary, baseCurrency } = detail;
+  const { account, category, history, positions, summary, baseCurrency, link, lastImport } = detail;
   const isDebt = category.kind === "debt";
 
   return (
@@ -42,6 +45,26 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
           {account.isExcluded && " · excluded from net worth"}
           {account.isHidden && " · hidden"}
         </p>
+        {link && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+            <span className={link.status === "ok" ? "text-muted" : "text-negative"}>
+              {link.status === "ok"
+                ? `Synced from ${EXCHANGE_LABELS[link.exchange]}${link.lastRefreshedAt ? ` · ${link.lastRefreshedAt.toLocaleString("en-US")}` : ""}`
+                : link.lastError}
+            </span>
+            <ActionForm action={refreshConnection} submitLabel="Refresh" submitClassName="btn" className="space-y-2">
+              <input type="hidden" name="id" value={link.id} />
+            </ActionForm>
+          </div>
+        )}
+        {lastImport && !link && (
+          <p className="mt-3 text-sm text-muted">
+            Imported from {lastImport.fileName} (as of {lastImport.asOf}) ·{" "}
+            <Link href="/import" className="underline">
+              Import a newer file
+            </Link>
+          </p>
+        )}
         {summary.missingRates.length > 0 && (
           <p className="mt-3 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
             No exchange rate yet for {summary.missingRates.join(", ")}.
@@ -61,7 +84,7 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
           <ActionForm action={updateAccount} submitLabel="Save" successMessage="Saved">
             <input type="hidden" name="id" value={account.id} />
             <Field label="Name" name="name" defaultValue={account.name} required />
-            <Field label="Institution" name="institution" defaultValue={account.institution ?? ""} />
+            <InstitutionField defaultValue={account.institution ?? ""} />
             <Select
               label="Category"
               name="categoryId"

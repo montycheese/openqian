@@ -31,6 +31,9 @@ export function ActionForm({
         </p>
       )}
       {state.ok && successMessage && !pending && <p className="text-sm text-positive">{successMessage}</p>}
+      {state.message && !pending && (
+        <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">{state.message}</p>
+      )}
       <button type="submit" disabled={pending} className={submitClassName}>
         {pending ? "Saving…" : submitLabel}
       </button>

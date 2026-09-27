@@ -96,7 +96,7 @@ General importer rules:
 - Locate the header row by its column names, not a fixed row number; skip preamble and disclaimer rows.
 - One file may contain **multiple accounts**; group rows by account.
 - Treat `-` / `N/A` / blank as null.
-- Skip total rows, but use them as a **checksum** (sum of row values must match the file total).
+- Skip total rows, but use them as a **checksum** (sum of row values must match the file total; a mismatch is shown as a warning before import).
 - Positions without a usable ticker (cash sweeps, bonds, CDs, structured products) keep the file's market value and are not repriced.
 - Capture cost basis and CUSIP when present.
 - Test fixtures are synthetic (fake accounts and numbers in the real layout); real exports are never committed.
@@ -152,13 +152,14 @@ General importer rules:
 
 ## Build order
 
-1. ✅ **Foundation** — scaffold, schema (currency on every amount), encrypted secret storage, manual assets, dashboard.
-2. **Prices & FX** — price feeds for tickers, FX fetch/cache, base-currency conversion, dual display.
-3. **File import** — OFX/QFX parser, CSV format profiles for common institutions, preview + account matching, staleness indicators.
-4. **Snapshots & history charts.**
-5. **Schwab Trader API adapter.**
-6. **CCXT exchanges.**
-7. v2 features; optional aggregator adapters as community contributions.
+1. ✅ **Foundation** — scaffold, schema (currency on every amount), encrypted secret storage, manual assets, dashboard, institution picker.
+2. ✅ **File import** *(pulled forward)* — generic positions parser for CSV/XLSX (header detection, multi-account files, cash detection, total-row checksum), preview + account matching by account number. Verified on a real Morgan Stanley export; Fidelity/Schwab layouts covered by synthetic tests and still need real sample files.
+3. ✅ **Crypto exchanges** *(pulled forward)* — ccxt connections (Coinbase, Kraken, Gemini, Binance.US) with encrypted keys, Coinbase key-permission check (refuses trade/transfer keys), balances priced in USD from the exchange's own markets, per-connection and "refresh all".
+4. **Prices & FX** — price feeds for manual tickers, FX fetch/cache, base-currency conversion, dual display.
+5. **Snapshots & history charts.**
+6. **Schwab Trader API adapter.**
+7. **OFX/QFX import** for bank balances (Chase, Wells Fargo).
+8. v2 features; optional aggregator adapters as community contributions.
 
 ## Open-source readiness
 

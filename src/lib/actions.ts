@@ -5,13 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { accounts, categories, holdingTypes, holdings, settings, valuations } from "@/lib/db/schema";
+import { accounts, categories, connections, holdingTypes, holdings, settings, valuations } from "@/lib/db/schema";
+import { deleteSecret } from "@/lib/secrets";
 
 // Server Actions are reachable by direct POST. The server only listens on
 // 127.0.0.1 and Next.js rejects cross-origin action requests, so there is no
 // per-user authorization to check here; every input is still validated.
 
-export type ActionState = { error?: string; ok?: boolean };
+export type ActionState = { error?: string; ok?: boolean; message?: string };
 
 const currency = z
   .string()
@@ -112,7 +113,12 @@ export async function updateAccount(_: ActionState, formData: FormData): Promise
 export async function deleteAccount(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = z.object({ id: z.string(), confirm: z.literal("on", { error: "Tick the box to confirm" }) }).safeParse(fields(formData));
   if (!parsed.success) return fail(parsed);
-  getDb().delete(accounts).where(eq(accounts.id, parsed.data.id)).run();
+  const db = getDb();
+  // Connections cascade with the account; their stored credentials must go too.
+  for (const c of db.select().from(connections).where(eq(connections.accountId, parsed.data.id)).all()) {
+    deleteSecret(db, `connection:${c.id}`);
+  }
+  db.delete(accounts).where(eq(accounts.id, parsed.data.id)).run();
   refresh();
   redirect("/");
 }

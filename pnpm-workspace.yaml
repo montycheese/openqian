@@ -3,3 +3,5 @@ allowBuilds:
   unrs-resolver: false
   better-sqlite3: true
   esbuild: true
+  bufferutil: false
+  ccxt: false

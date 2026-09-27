@@ -1,5 +1,5 @@
 import { ActionForm } from "@/components/action-form";
-import { CurrencySelect, Field, Select } from "@/components/fields";
+import { CurrencySelect, Field, InstitutionField, Select } from "@/components/fields";
 import { createAccount } from "@/lib/actions";
 import { getBaseCurrency, listCategories } from "@/lib/queries";
 
@@ -11,7 +11,7 @@ export default async function NewAccountPage() {
       <div className="card p-5">
         <ActionForm action={createAccount} submitLabel="Create account">
           <Field label="Name" name="name" required placeholder="e.g. Brokerage, House, Startup shares" />
-          <Field label="Institution" name="institution" placeholder="Optional" />
+          <InstitutionField />
           <Select
             label="Category"
             name="categoryId"

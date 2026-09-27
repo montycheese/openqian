@@ -1,3 +1,4 @@
+import { INSTITUTIONS } from "@/lib/institutions";
 import { currencyOptions } from "@/lib/money";
 
 type FieldProps = {
@@ -53,6 +54,30 @@ export function Checkbox({ label, name, defaultChecked }: { label: string; name:
     <label className="flex items-center gap-2 text-sm">
       <input type="checkbox" name={name} defaultChecked={defaultChecked} className="h-4 w-4 accent-accent" />
       {label}
+    </label>
+  );
+}
+
+/** Text input with a dropdown of common institutions; any name can be typed. */
+export function InstitutionField({ defaultValue }: { defaultValue?: string }) {
+  return (
+    <label className="block">
+      <span className="label">Institution</span>
+      <input
+        name="institution"
+        list="institution-options"
+        className="input"
+        defaultValue={defaultValue}
+        placeholder="Pick from the list or type a name"
+        autoComplete="off"
+      />
+      <datalist id="institution-options">
+        {Object.values(INSTITUTIONS)
+          .flat()
+          .map((name) => (
+            <option key={name} value={name} />
+          ))}
+      </datalist>
     </label>
   );
 }

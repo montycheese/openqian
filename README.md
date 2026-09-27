@@ -10,6 +10,9 @@ A local, view-only net worth and portfolio tracker. It runs entirely on your own
 - Manual accounts:
   - **Single-value** accounts with dated history — bank balances, real estate, loans, private shares (value or quantity × price per share)
   - **Holdings** accounts — positions with symbol, quantity, price, and cost basis
+- **Import positions** from brokerage exports (`.csv` / `.xlsx`) — e.g. Morgan Stanley "Holdings", Fidelity and Schwab positions downloads. Files are read locally and not kept.
+- **Crypto exchanges** via read-only API keys (Coinbase, Kraken, Gemini, Binance.US), refreshed on demand
+- Institution picker with common brokerages, banks, and exchanges
 - Multi-currency data model with a configurable base currency (exchange rates coming next)
 - Exclude or hide accounts; editable categories
 

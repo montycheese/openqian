@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { ActionForm } from "@/components/action-form";
 import { Amount } from "@/components/money";
+import { refreshAllConnections } from "@/lib/connections/actions";
 import { formatMoney } from "@/lib/money";
-import { getNetWorth } from "@/lib/queries";
+import { countConnections, getNetWorth } from "@/lib/queries";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const { hidden } = await searchParams;
   const includeHidden = hidden === "1";
-  const nw = await getNetWorth({ includeHidden });
+  const [nw, connectionCount] = await Promise.all([getNetWorth({ includeHidden }), countConnections()]);
   const cur = nw.baseCurrency;
   const hasAccounts = nw.categories.some((c) => c.accounts.length > 0);
 
@@ -25,6 +27,17 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             <p className="num font-medium">{formatMoney(nw.debts, cur)}</p>
           </div>
         </div>
+        {connectionCount > 0 && (
+          <ActionForm
+            action={refreshAllConnections}
+            submitLabel={`Refresh ${connectionCount} connection${connectionCount === 1 ? "" : "s"}`}
+            submitClassName="btn"
+            successMessage="Up to date"
+            className="mt-4 space-y-2"
+          >
+            {null}
+          </ActionForm>
+        )}
       </section>
 
       {nw.missingRates.length > 0 && (
