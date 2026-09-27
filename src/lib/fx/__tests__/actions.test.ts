@@ -79,7 +79,7 @@ describe("refreshFxAction", () => {
 });
 
 describe("changing the base currency", () => {
-  it("keeps converting through rates fetched against the old base", async () => {
+  it("keeps converting through rates stored against the old base", async () => {
     await actions.saveManualRate({}, form({ currency: "EUR", rate: "1.25" }));
     await setBaseCurrency({}, form({ baseCurrency: "EUR" }));
     expect(loadConverter(db, "EUR")(125, "USD")).toBeCloseTo(100);

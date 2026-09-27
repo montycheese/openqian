@@ -2,7 +2,7 @@ import { asc, count, desc, eq } from "drizzle-orm";
 import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, holdings, imports, settings, valuations } from "@/lib/db/schema";
-import { loadConverter } from "@/lib/fx";
+import { listRates, loadConverter } from "@/lib/fx";
 import { DEFAULT_BASE_CURRENCY } from "@/lib/money";
 import { summarizeAccount, summarizeNetWorth } from "@/lib/valuation";
 
@@ -54,6 +54,11 @@ export async function getAccountDetail(id: string) {
   const lastImport =
     db.select().from(imports).where(eq(imports.accountId, id)).orderBy(desc(imports.createdAt)).limit(1).get() ?? null;
   return { account, category, history, positions, summary, baseCurrency, link, lastImport };
+}
+
+export async function getFxRates() {
+  const baseCurrency = await getBaseCurrency();
+  return listRates(getDb(), baseCurrency);
 }
 
 export async function countConnections(): Promise<number> {
