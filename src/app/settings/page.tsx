@@ -18,7 +18,7 @@ export default async function SettingsPage() {
 
       <section className="card p-5">
         <h2 className="font-medium">Base currency</h2>
-        <p className="mt-1 text-sm text-muted">Totals and charts are shown in this currency.</p>
+        <p className="mt-1 text-sm text-muted">Totals are shown in this currency.</p>
         <ActionForm action={setBaseCurrency} submitLabel="Save" successMessage="Saved" className="mt-4 space-y-4">
           <CurrencySelect name="baseCurrency" label="Currency" defaultValue={baseCurrency} />
         </ActionForm>
@@ -73,7 +73,7 @@ export default async function SettingsPage() {
         <details className="border-t border-border">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-accent">+ Add category</summary>
           <div className="px-4 pb-4">
-            <ActionForm action={saveCategory} submitLabel="Add category">
+            <ActionForm action={saveCategory} submitLabel="Add category" resetOnSuccess>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Name" name="name" required />
                 <Select label="Type" name="kind" options={kindOptions} />

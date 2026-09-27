@@ -35,8 +35,9 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             className="mt-4 space-y-2"
           >
             <p className="text-xs text-muted">
-              Updates {connectionCount > 0 ? `${connectionCount} exchange connection${connectionCount === 1 ? "" : "s"} and ` : ""}
-              market prices, and exchange rates.
+              Updates{" "}
+              {connectionCount > 0 ? `${connectionCount} exchange connection${connectionCount === 1 ? "" : "s"}, ` : ""}
+              market prices{connectionCount > 0 ? "," : ""} and exchange rates.
             </p>
           </ActionForm>
         )}
@@ -86,6 +87,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                         <span className="block truncate text-xs text-muted">
                           {[
                             s.account.institution,
+                            s.account.accountMask && `…${s.account.accountMask}`,
                             s.isEmpty ? "No value yet" : s.asOf && `as of ${s.asOf}`,
                             s.account.isExcluded && "excluded",
                             s.account.isHidden && "hidden",

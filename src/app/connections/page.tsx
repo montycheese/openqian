@@ -82,7 +82,7 @@ export default async function ConnectionsPage() {
           </ol>
           <p className="mt-2">For other exchanges, create an API key with read/query permissions only.</p>
         </details>
-        <ActionForm action={addConnection} submitLabel="Connect" successMessage="Connected" className="mt-4 space-y-4">
+        <ActionForm action={addConnection} submitLabel="Connect" successMessage="Connected" resetOnSuccess className="mt-4 space-y-4">
           <Select
             label="Exchange"
             name="exchange"

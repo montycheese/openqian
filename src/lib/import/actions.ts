@@ -167,7 +167,7 @@ export async function applyImport(_: ApplyState, formData: FormData): Promise<Ap
         tx.insert(imports)
           .values({ accountId: account.id, fileName: data.fileName, asOf: data.asOf, positions: a.holdings.length, totalValue: total })
           .run();
-        results.push({ accountId: account.id, name: account.name, summary: `${a.holdings.length} positions` });
+        results.push({ accountId: account.id, name: account.name, summary: `${a.holdings.length} position${a.holdings.length === 1 ? "" : "s"}` });
       }
 
       for (const b of chosenBalances) {

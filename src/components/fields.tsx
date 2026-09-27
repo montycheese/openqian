@@ -1,21 +1,9 @@
 import { INSTITUTIONS } from "@/lib/institutions";
 import { currencyOptions } from "@/lib/money";
 
-type FieldProps = {
-  label: string;
-  name: string;
-  hint?: string;
-} & React.InputHTMLAttributes<HTMLInputElement>;
-
-export function Field({ label, name, hint, ...input }: FieldProps) {
-  return (
-    <label className="block">
-      <span className="label">{label}</span>
-      <input name={name} className="input" {...input} />
-      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
-    </label>
-  );
-}
+// Field is a client component (it needs useId); the rest render on the server so
+// lists like currencies come from one runtime and hydrate identically.
+export { Field } from "./field";
 
 type SelectProps = {
   label: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { applyImport, previewImport, type ImportPreview } from "@/lib/import/actions";
 import { formatMoney, formatNumber } from "@/lib/money";
 
@@ -45,7 +45,15 @@ export function ImportFlow(options: ImportOptions) {
 
   return (
     <div className="space-y-6">
-      <form action={previewAction} className="card space-y-4 p-5">
+      <form
+        className="card space-y-4 p-5"
+        onSubmit={(e) => {
+          // Not the `action` prop: React would reset the form and clear the chosen file.
+          e.preventDefault();
+          const data = new FormData(e.currentTarget);
+          startTransition(() => previewAction(data));
+        }}
+      >
         <label className="block">
           <span className="label">Export file (.csv, .xlsx, .ofx, .qfx)</span>
           <input
@@ -96,7 +104,7 @@ function Preview({
   const { holdings, balances } = preview;
   const institution = holdings?.institution ?? balances?.institution ?? null;
   const defaultName = (name: string, mask: string | null) =>
-    [institution, name || null, mask ? `…${mask}` : null].filter(Boolean).join(" ") || "Imported account";
+    [institution, name || null].filter(Boolean).join(" ") || (mask ? `Account …${mask}` : "Imported account");
 
   const [holdingMaps, setHoldingMaps] = useState<Mapping[]>(() =>
     (holdings?.accounts ?? []).map((a, i) => ({
@@ -188,7 +196,9 @@ function Preview({
             existingNote="This replaces the account's current holdings."
           />
           <details className="border-t border-border">
-            <summary className="cursor-pointer px-4 py-3 text-sm text-muted">{a.holdings.length} positions</summary>
+            <summary className="cursor-pointer px-4 py-3 text-sm text-muted">
+              {a.holdings.length} position{a.holdings.length === 1 ? "" : "s"}
+            </summary>
             <ul className="divide-y divide-border text-sm">
               {a.holdings.map((h, j) => (
                 <li key={j} className="flex items-center justify-between gap-3 px-4 py-2">

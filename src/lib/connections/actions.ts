@@ -20,13 +20,23 @@ type ConnectionState = ActionState;
 
 const secretName = (connectionId: string) => `connection:${connectionId}`;
 
-function describeError(err: unknown): string {
+/** Errors ccxt raises for exchange responses; anything else is a local failure. */
+const CCXT_ERROR = /^(BaseError|ExchangeError|BadRequest|BadResponse|NotSupported|OperationFailed|InvalidNonce|ArgumentsRequired|RateLimitExceeded|DDoSProtection|OnMaintenance|InsufficientFunds|InvalidOrder|OrderNotFound|AccountSuspended|AccountNotEnabled|BadSymbol)$/;
+
+/** Raised by OpenChieng itself; its message is already user-facing. */
+class ConnectionError extends Error {}
+
+function describeError(err: unknown, { adding = false } = {}): string {
   const name = err instanceof Error ? err.constructor.name : "";
-  if (name === "AuthenticationError" || name === "PermissionDenied") {
+  if (name === "AuthenticationError" || name === "PermissionDenied" || name === "ArgumentsRequired") {
     return "The exchange rejected these credentials. Check the API key and secret.";
   }
   if (name === "NetworkError" || name === "RequestTimeout" || name === "ExchangeNotAvailable") {
     return "Couldn't reach the exchange. Check your internet connection and try again.";
+  }
+  if (adding && err instanceof Error && !(err instanceof ConnectionError) && !CCXT_ERROR.test(name)) {
+    // e.g. "padding: invalid..." from signing a request with a malformed private key
+    return "This API key or secret isn't in the expected format. Paste the complete key and secret exactly as the exchange shows them (for Coinbase, the key name and the full private key).";
   }
   const message = err instanceof Error ? err.message : String(err);
   return message.length > 300 ? `${message.slice(0, 300)}…` : message;
@@ -76,7 +86,7 @@ export async function addConnection(_: ConnectionState, formData: FormData): Pro
     }
     result = await fetchPositions(exchange);
   } catch (err) {
-    return { error: describeError(err) };
+    return { error: describeError(err, { adding: true }) };
   }
 
   const db = getDb();
@@ -113,7 +123,7 @@ async function refresh(connectionId: string): Promise<ConnectionState> {
   if (!conn) return { error: "Connection not found" };
   try {
     const stored = await getSecret(db, secretName(conn.id));
-    if (!stored) throw new Error("Saved credentials are missing. Remove this connection and add it again.");
+    if (!stored) throw new ConnectionError("Saved credentials are missing. Remove this connection and add it again.");
     const exchange = await createExchange(conn.exchange, JSON.parse(stored) as ExchangeCredentials);
     const result = await fetchPositions(exchange);
     replaceHoldings(conn.accountId, result.positions);

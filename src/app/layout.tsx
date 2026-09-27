@@ -17,20 +17,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
         <header className="border-b border-border bg-surface">
-          <nav className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 text-sm sm:gap-4">
-            <Link href="/" className="mr-auto text-base font-semibold">
+          <nav className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-1 px-2 py-1 text-sm sm:px-4">
+            <Link href="/" className="mr-auto px-2 py-2 text-base font-semibold">
               OpenChieng
             </Link>
-            <Link href="/accounts/new" className="text-muted hover:text-foreground">
+            <Link href="/accounts/new" className="rounded-md px-2 py-2 text-muted hover:text-foreground">
               Add
             </Link>
-            <Link href="/import" className="text-muted hover:text-foreground">
+            <Link href="/import" className="rounded-md px-2 py-2 text-muted hover:text-foreground">
               Import
             </Link>
-            <Link href="/connections" className="text-muted hover:text-foreground">
+            <Link href="/connections" className="rounded-md px-2 py-2 text-muted hover:text-foreground">
               Connections
             </Link>
-            <Link href="/settings" className="text-muted hover:text-foreground">
+            <Link href="/settings" className="rounded-md px-2 py-2 text-muted hover:text-foreground">
               Settings
             </Link>
           </nav>

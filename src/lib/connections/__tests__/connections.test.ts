@@ -79,6 +79,12 @@ describe("exchange connections", () => {
     expect(JSON.parse((await getSecret(db, `connection:${conn.id}`))!)).toMatchObject({ apiKey: "organizations/x/apiKeys/y" });
   });
 
+  it("explains malformed keys instead of showing low-level errors", async () => {
+    fakeExchange.fail = new Error("padding: invalid, string should have whole number of bytes");
+    const res = await actions.addConnection({}, form({ exchange: "coinbase", name: "", apiKey: "x", secret: "y" }));
+    expect(res.error).toMatch(/isn't in the expected format/);
+  });
+
   it("refuses keys that can trade or transfer", async () => {
     fakeExchange.permissions.can_trade = true;
     const res = await actions.addConnection({}, form({ exchange: "coinbase", name: "", apiKey: "k", secret: "s" }));

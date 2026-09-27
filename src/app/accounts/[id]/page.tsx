@@ -121,7 +121,7 @@ function ValueSection({ account, history }: { account: Account; history: Valuati
     <>
       <section className="card p-5">
         <h2 className="font-medium">Update value</h2>
-        <ActionForm action={addValuation} submitLabel="Add value" className="mt-4 space-y-4">
+        <ActionForm action={addValuation} submitLabel="Add value" successMessage="Value added" resetOnSuccess className="mt-4 space-y-4">
           <input type="hidden" name="accountId" value={account.id} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Date" name="date" type="date" defaultValue={today} required />
@@ -249,7 +249,7 @@ function HoldingsSection({ account, positions }: { account: Account; positions: 
       <details className="border-t border-border">
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-accent">+ Add holding</summary>
         <div className="px-4 pb-4">
-          <ActionForm action={saveHolding} submitLabel="Add holding">
+          <ActionForm action={saveHolding} submitLabel="Add holding" successMessage="Holding added" resetOnSuccess>
             <HoldingFields account={account} />
           </ActionForm>
         </div>
