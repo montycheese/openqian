@@ -172,3 +172,34 @@ describe("describeTrend", () => {
     expect(describeTrend("Net worth", [], "USD")).toBe("Net worth: no history.");
   });
 });
+
+describe("withLatestPoint", () => {
+  it("replaces today's recorded point with the live value", async () => {
+    const { withLatestPoint } = await import("@/lib/chart");
+    const points = [
+      { date: "2026-09-25", value: 1 },
+      { date: "2026-09-27", value: 2 },
+    ];
+    expect(withLatestPoint(points, "2026-09-27", 3)).toEqual([
+      { date: "2026-09-25", value: 1 },
+      { date: "2026-09-27", value: 3 },
+    ]);
+    expect(withLatestPoint([], "2026-09-27", 5)).toEqual([{ date: "2026-09-27", value: 5 }]);
+  });
+});
+
+describe("pointsSince", () => {
+  it("opens the range with the value in effect at its start", async () => {
+    const { pointsSince } = await import("@/lib/chart");
+    const points = [
+      { date: "2026-01-01", value: 1 },
+      { date: "2026-09-27", value: 2 },
+    ];
+    expect(pointsSince(points, "2026-06-27")).toEqual([
+      { date: "2026-06-27", value: 1 },
+      { date: "2026-09-27", value: 2 },
+    ]);
+    expect(pointsSince(points, null)).toBe(points);
+    expect(pointsSince([{ date: "2026-09-27", value: 2 }], "2026-06-27")).toEqual([{ date: "2026-09-27", value: 2 }]);
+  });
+});

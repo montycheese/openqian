@@ -1,3 +1,4 @@
+import { localDate } from "@/lib/dates";
 import type { HoldingType } from "@/lib/db/schema";
 import { detectInstitution } from "@/lib/institutions";
 import type { Table } from "./read-table";
@@ -215,7 +216,7 @@ export function parseHoldingsTable(rows: Table, fileName: string): HoldingsImpor
     if (!checksum.ok) warnings.push("The positions don't add up to the file's total. Some rows may not have been read.");
   }
 
-  const asOf = findAsOf(rows) ?? new Date().toISOString().slice(0, 10);
+  const asOf = findAsOf(rows) ?? localDate();
   if (!findAsOf(rows)) warnings.push("No export date found in the file; using today's date.");
 
   return { institution: detectInstitution(institutionText), asOf, accounts, checksum, warnings };

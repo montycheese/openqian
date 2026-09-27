@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { localDate } from "@/lib/dates";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, holdingTypes, holdings, settings, valuations } from "@/lib/db/schema";
 import { deleteSecret } from "@/lib/secrets";
@@ -50,7 +51,7 @@ function refreshValues() {
   refresh();
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDate();
 
 // ---------- Accounts ----------
 

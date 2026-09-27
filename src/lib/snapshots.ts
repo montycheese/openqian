@@ -16,12 +16,9 @@ import {
 import { loadConverter, readBaseCurrency } from "@/lib/fx";
 import type { Converter } from "@/lib/money";
 import { summarizeNetWorth } from "@/lib/valuation";
+import { localDate } from "@/lib/dates";
 
-/** YYYY-MM-DD in the machine's timezone, so "today" matches the user's calendar. */
-export function localDate(d = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+export { localDate };
 
 type Inputs = { categories: Category[]; accounts: Account[]; valuations: Valuation[]; holdings: Holding[] };
 

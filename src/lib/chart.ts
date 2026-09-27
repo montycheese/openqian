@@ -36,7 +36,11 @@ export function rangeHref(path: string, params: Record<string, string | undefine
 
 /** Points on or after `start` (null keeps everything). Input must be oldest first. */
 export function pointsSince(points: ChartPoint[], start: string | null): ChartPoint[] {
-  return start ? points.filter((p) => p.date >= start) : points;
+  if (!start) return points;
+  const inRange = points.filter((p) => p.date >= start);
+  // Open the range with the last value recorded before it, so the chart starts at the range's start.
+  const before = points.filter((p) => p.date < start).at(-1);
+  return before && inRange[0]?.date !== start ? [{ date: start, value: before.value }, ...inRange] : inRange;
 }
 
 export type Change = { absolute: number; percent: number | null };
@@ -173,4 +177,9 @@ export function describeTrend(label: string, points: ChartPoint[], currency: str
     `${formatMoney(last.value, currency)} on ${formatFullDate(last.date)}` +
     (change && change.absolute !== 0 ? `, a change of ${formatChange(change, currency)}.` : ", unchanged.")
   );
+}
+
+/** Series ending with `value` on `date`, replacing any point already recorded for that day. */
+export function withLatestPoint(points: ChartPoint[], date: string, value: number): ChartPoint[] {
+  return [...points.filter((p) => p.date < date), { date, value }];
 }

@@ -2,11 +2,18 @@
 // accounts, and requests every page. Exits non-zero on any failing page.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 
-const port = 3900 + Math.floor(Math.random() * 90);
+// Ask the OS for a free port so parallel runs can't collide.
+const port = await new Promise((resolve) => {
+  const srv = net.createServer().listen(0, "127.0.0.1", () => {
+    const { port } = srv.address();
+    srv.close(() => resolve(port));
+  });
+});
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openchieng-smoke-"));
 const base = `http://127.0.0.1:${port}`;
 const server = spawn("node_modules/.bin/next", ["start", "-H", "127.0.0.1", "--port", String(port)], {

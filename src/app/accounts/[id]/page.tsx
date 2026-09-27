@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { localDate } from "@/lib/dates";
 import { ActionForm } from "@/components/action-form";
 import { Checkbox, CurrencySelect, Field, InstitutionField, Select } from "@/components/fields";
 import { Amount } from "@/components/money";
@@ -145,7 +146,7 @@ async function accountChart(
 ): Promise<{ currency: string; points: ChartPoint[] } | null> {
   const start = rangeStart(range);
   if (account.kind === "value") {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDate();
     const s = valuationSeries(valuations, { start, today });
     return s.currency && s.observations >= 2 ? { currency: s.currency, points: s.points } : null;
   }
@@ -154,7 +155,7 @@ async function accountChart(
 }
 
 function ValueSection({ account, history }: { account: Account; history: Valuation[] }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   return (
     <>
       <section className="card p-5">

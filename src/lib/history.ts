@@ -1,3 +1,4 @@
+import { localDate } from "@/lib/dates";
 import { and, asc, eq, gte } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { snapshotAccounts, snapshots } from "@/lib/db/schema";
@@ -12,8 +13,8 @@ export type AccountPoint = { date: string; baseValue: number; nativeValue: numbe
 export function rangeStart(range: HistoryRange, today = new Date()): string | null {
   if (range === "all") return null;
   const months = { "1m": 1, "3m": 3, "6m": 6, "1y": 12 }[range];
-  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - months, today.getUTCDate()));
-  return d.toISOString().slice(0, 10);
+  // Local calendar, matching how snapshots are dated.
+  return localDate(new Date(today.getFullYear(), today.getMonth() - months, today.getDate()));
 }
 
 /**

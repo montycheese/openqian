@@ -1,3 +1,4 @@
+import { localDate } from "@/lib/dates";
 import { and, eq, or } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { accounts, fxRates, holdings, settings, valuations, type FxRate } from "@/lib/db/schema";
@@ -22,7 +23,7 @@ export type RateInfo = {
   manualPair: { base: string; quote: string } | null;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDate();
 
 export function readBaseCurrency(db: DB): string {
   return db.select().from(settings).where(eq(settings.key, "base_currency")).get()?.value ?? DEFAULT_BASE_CURRENCY;

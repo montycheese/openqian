@@ -1,3 +1,4 @@
+import { localDate } from "@/lib/dates";
 import type { HoldingType } from "@/lib/db/schema";
 import { detectInstitution } from "@/lib/institutions";
 import type { HoldingsImport, ParsedAccount, ParsedHolding } from "./parse-holdings";
@@ -113,7 +114,7 @@ export function parseOfx(fileText: string, fileName: string): OfxImport {
   const ofx = parseOfxTree(fileText);
   const org = text(find(ofx, "FI"), "ORG");
   const institution = detectInstitution(`${org ?? ""} ${fileName}`) ?? org;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const warnings: string[] = [];
 
   // Bank and credit-card statements → balances

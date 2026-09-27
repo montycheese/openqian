@@ -3,7 +3,8 @@ import { ActionForm } from "@/components/action-form";
 import { Amount } from "@/components/money";
 import { HistoryCard } from "@/components/history-card";
 import { refreshAll } from "@/lib/refresh";
-import { formatFullDate, parseRange, pointsSince, rangeHref, type ChartPoint } from "@/lib/chart";
+import { formatFullDate, parseRange, pointsSince, rangeHref, withLatestPoint, type ChartPoint } from "@/lib/chart";
+import { localDate } from "@/lib/dates";
 import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney } from "@/lib/money";
 import { countConnections, getNetWorth, getNetWorthSeries } from "@/lib/queries";
@@ -54,7 +55,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
 
       {(hasAccounts || series.points.length > 0) && (
         <NetWorthHistory
-          points={series.points}
+          // End on the live total so the chart agrees with the card above it.
+          points={hasAccounts ? withLatestPoint(series.points, localDate(), nw.netWorth) : series.points}
           currency={series.baseCurrency}
           range={range}
           hrefFor={(r) => rangeHref("/", query, r)}
