@@ -129,6 +129,31 @@ export const connections = sqliteTable("connections", {
   createdAt: createdAt(),
 });
 
+export const chainFamilies = ["evm", "solana", "bitcoin"] as const;
+
+/**
+ * Watch-only blockchain addresses. One account per address; an EVM address is
+ * tracked on every network listed in `chains`.
+ */
+export const wallets = sqliteTable(
+  "wallets",
+  {
+    id: id(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    family: text("family", { enum: chainFamilies }).notNull(),
+    address: text("address").notNull(),
+    /** JSON array of chain ids, e.g. ["ethereum","base","arbitrum"]. */
+    chains: text("chains").notNull(),
+    status: text("status", { enum: ["ok", "error"] }).notNull().default("ok"),
+    lastRefreshedAt: integer("last_refreshed_at", { mode: "timestamp_ms" }),
+    lastError: text("last_error"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("wallets_family_address_idx").on(t.family, t.address)],
+);
+
 /** One row per applied file import (the file itself is never stored). */
 export const imports = sqliteTable("imports", {
   id: id(),
@@ -230,4 +255,6 @@ export type ExchangeId = (typeof exchanges)[number];
 export type Price = typeof prices.$inferSelect;
 export type FxRate = typeof fxRates.$inferSelect;
 export type Snapshot = typeof snapshots.$inferSelect;
+export type Wallet = typeof wallets.$inferSelect;
+export type ChainFamily = (typeof chainFamilies)[number];
 export type SnapshotAccount = typeof snapshotAccounts.$inferSelect;
