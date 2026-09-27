@@ -61,8 +61,42 @@ export function formatChange(change: Change, currency: string): string {
 }
 
 /** Compact money for axis ticks, e.g. "$1.2M". */
-export function formatAxisMoney(value: number, currency: string): string {
-  return formatMoney(value, currency, { compact: true });
+export function formatAxisMoney(value: number, currency: string, fractionDigits = 1): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+/**
+ * Round-number y-axis ticks covering `values`, and a compact formatter with
+ * just enough decimals to tell the ticks apart ("$1.21M", "$1.22M", ...).
+ */
+export function valueAxis(
+  values: number[],
+  currency: string,
+  count = 4,
+): { ticks: number[]; domain: [number, number]; format: (v: number) => string } {
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) {
+    const pad = Math.abs(min) * 0.05 || 1;
+    min -= pad;
+    max += pad;
+  }
+  const raw = (max - min) / (count - 1);
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = ([1, 2, 2.5, 5, 10].find((m) => m * mag >= raw) ?? 10) * mag;
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+  let digits = 1;
+  while (digits < 4 && new Set(ticks.map((t) => formatAxisMoney(t, currency, digits))).size < ticks.length) digits++;
+  return { ticks, domain: [lo, hi], format: (v) => formatAxisMoney(v, currency, digits) };
 }
 
 const DAY_MS = 86_400_000;
@@ -92,8 +126,11 @@ export function dateTicks(min: number, max: number, count = 5): { ticks: number[
   const n = Math.max(1, Math.min(count, days + 1));
   const ticks =
     n === 1 ? [min] : Array.from({ length: n }, (_, i) => min + Math.round((days * i) / (n - 1)) * DAY_MS);
-  const fmt = days > 120 ? dateFormats.month : dateFormats.day;
-  return { ticks, format: (t) => fmt.format(t).replace(/ (\d{2})$/, " ’$1") };
+  const format =
+    days > 120
+      ? (t: number) => dateFormats.month.format(t).replace(/ (\d{2})$/, " ’$1")
+      : (t: number) => dateFormats.day.format(t);
+  return { ticks, format };
 }
 
 /**

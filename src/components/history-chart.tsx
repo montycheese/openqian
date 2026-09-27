@@ -2,7 +2,7 @@
 
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
-import { dateTicks, formatAxisMoney, formatFullDate, toTime, type ChartPoint } from "@/lib/chart";
+import { dateTicks, formatFullDate, toTime, valueAxis, type ChartPoint } from "@/lib/chart";
 import { formatMoney } from "@/lib/money";
 
 type Props = {
@@ -20,6 +20,10 @@ const tick = { fill: "var(--muted)", fontSize: 12 };
 export function HistoryChart({ points, currency, summary, step }: Props) {
   const data = points.map((p) => ({ t: toTime(p.date), value: p.value }));
   const { ticks, format } = dateTicks(data[0].t, data[data.length - 1].t);
+  const y = valueAxis(
+    data.map((d) => d.value),
+    currency,
+  );
 
   return (
     <figure className="h-48 w-full sm:h-56" aria-label={summary}>
@@ -40,18 +44,19 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
           tickFormatter={format}
           tick={tick}
           tickLine={false}
+          tickMargin={6}
           axisLine={{ stroke: "var(--border)" }}
           minTickGap={12}
           interval="preserveStartEnd"
         />
         <YAxis
           width="auto"
-          domain={["auto", "auto"]}
-          tickFormatter={(v: number) => formatAxisMoney(v, currency)}
+          domain={y.domain}
+          ticks={y.ticks}
+          tickFormatter={y.format}
           tick={tick}
           tickLine={false}
           axisLine={false}
-          tickCount={4}
         />
         <Tooltip
           cursor={{ stroke: "var(--muted)", strokeWidth: 1 }}

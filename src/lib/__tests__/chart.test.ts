@@ -9,6 +9,7 @@ import {
   rangeHref,
   toTime,
   valuationSeries,
+  valueAxis,
 } from "@/lib/chart";
 
 describe("parseRange", () => {
@@ -70,6 +71,27 @@ describe("formatAxisMoney", () => {
   });
 });
 
+describe("valueAxis", () => {
+  it("uses round steps that cover the data", () => {
+    const axis = valueAxis([1_193_977, 1_238_100], "USD");
+    expect(axis.ticks).toEqual([1_180_000, 1_200_000, 1_220_000, 1_240_000]);
+    expect(axis.domain).toEqual([1_180_000, 1_240_000]);
+  });
+
+  it("adds decimals until tick labels differ", () => {
+    const axis = valueAxis([1_193_977, 1_238_100], "USD");
+    expect(axis.ticks.map(axis.format)).toEqual(["$1.18M", "$1.2M", "$1.22M", "$1.24M"]);
+    const wide = valueAxis([0, 3000], "USD");
+    expect(wide.ticks.map(wide.format)).toEqual(["$0", "$1K", "$2K", "$3K"]);
+  });
+
+  it("pads a flat series", () => {
+    const axis = valueAxis([100, 100], "USD");
+    expect(axis.domain[0]).toBeLessThan(100);
+    expect(axis.domain[1]).toBeGreaterThan(100);
+  });
+});
+
 describe("dateTicks", () => {
   it("spreads whole days evenly and labels days for short spans", () => {
     const { ticks, format } = dateTicks(toTime("2026-09-01"), toTime("2026-09-09"), 5);
@@ -81,6 +103,7 @@ describe("dateTicks", () => {
       "2026-09-09",
     ]);
     expect(format(ticks[0])).toBe("Sep 1");
+    expect(format(toTime("2026-09-27"))).toBe("Sep 27");
   });
 
   it("never has more ticks than days", () => {
