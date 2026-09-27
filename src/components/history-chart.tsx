@@ -12,14 +12,12 @@ type Props = {
   currency: string;
   /** Screen-reader summary of the trend. */
   summary: string;
-  /** Draw steps: the value holds until the next point (manual valuations). */
-  step?: boolean;
 };
 
 const tick = { fill: "var(--muted)", fontSize: 12 };
 
 /** Single-series area chart of a value over time. Needs at least two points. */
-export function HistoryChart({ points, currency, summary, step }: Props) {
+export function HistoryChart({ points, currency, summary }: Props) {
   const hidden = usePrivateMode();
   const data = points.map((p) => ({ t: toTime(p.date), value: p.value }));
   const { ticks, format } = dateTicks(data[0].t, data[data.length - 1].t);
@@ -29,7 +27,7 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
   );
 
   return (
-    <figure className="h-48 w-full sm:h-56" aria-label={hidden ? "Value over time (amounts hidden in private mode)" : summary}>
+    <figure className="h-48 w-full sm:h-56 [&_path]:[shape-rendering:crispEdges]" aria-label={hidden ? "Value over time (amounts hidden in private mode)" : summary}>
       <AreaChart
         responsive
         data={data}
@@ -69,16 +67,19 @@ export function HistoryChart({ points, currency, summary, step }: Props) {
         />
         <Area
           dataKey="value"
-          type={step ? "stepAfter" : "monotone"}
+          // Always stepped: a pixel line, like an old game's graph.
+          type="stepAfter"
           // Ink brush stroke on paper; the active point is a red seal dot.
           stroke="var(--ink)"
-          strokeWidth={3.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeWidth={3}
+          strokeLinecap="square"
+          strokeLinejoin="miter"
           fill="var(--ink)"
           fillOpacity={0.05}
           baseValue="dataMin"
-          activeDot={{ r: 5, fill: "#c0392b", stroke: "var(--surface)", strokeWidth: 2 }}
+          activeDot={(props: { cx?: number; cy?: number }) => (
+            <rect x={(props.cx ?? 0) - 5} y={(props.cy ?? 0) - 5} width={10} height={10} fill="#c0392b" stroke="#1a0806" strokeWidth={2} />
+          )}
           dot={false}
           isAnimationActive={false}
         />

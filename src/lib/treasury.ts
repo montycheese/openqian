@@ -36,3 +36,20 @@ export const CATEGORY_ZH: Record<string, string> = {
   Loans: "贷款",
   Mortgages: "房贷",
 };
+
+/** RuneScape-style stack label: 950, 9.5K, 95K, 1.2M, 12M. */
+export function stackLabel(value: number): string {
+  const v = Math.abs(value);
+  const trim = (n: number) => String(Number(n.toFixed(1)));
+  if (v >= 1e9) return trim(v / 1e9) + "B";
+  if (v >= 1e6) return trim(v / 1e6) + "M";
+  if (v >= 1e4) return Math.round(v / 1e3) + "K";
+  if (v >= 1e3) return trim(v / 1e3) + "K";
+  return String(Math.round(v));
+}
+
+/** Stack colours: yellow below 100K, white from 100K, green from 10M; debts are red. */
+export function stackColor(value: number, debt = false): string {
+  if (debt) return "#ff5a4a";
+  return value >= 1e7 ? "#00ff80" : value >= 1e5 ? "#ffffff" : "#ffff00";
+}

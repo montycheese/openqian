@@ -12,14 +12,12 @@ type Props = {
   range: HistoryRange;
   /** Link for each range option. */
   hrefFor: (range: HistoryRange) => string;
-  /** Draw steps between points (values that hold until the next one). */
-  step?: boolean;
   /** An increase is bad news, e.g. a debt balance. */
   invert?: boolean;
 };
 
 /** Card with a range selector, the change over the range, and the chart. */
-export function HistoryCard({ title, currency, points, range, hrefFor, step, invert }: Props) {
+export function HistoryCard({ title, currency, points, range, hrefFor, invert }: Props) {
   const change = computeChange(points);
   const good = change && change.absolute !== 0 ? change.absolute > 0 !== Boolean(invert) : null;
 
@@ -41,7 +39,7 @@ export function HistoryCard({ title, currency, points, range, hrefFor, step, inv
       </div>
       <div className="mt-4">
         {points.length >= 2 ? (
-          <HistoryChart points={points} currency={currency} step={step} summary={describeTrend(title, points, currency)} />
+          <HistoryChart points={points} currency={currency} summary={describeTrend(title, points, currency)} />
         ) : (
           <p className="flex h-24 items-center justify-center text-sm text-muted">
             Not enough history in this range yet.
@@ -54,7 +52,7 @@ export function HistoryCard({ title, currency, points, range, hrefFor, step, inv
 
 function RangeTabs({ range, hrefFor }: { range: HistoryRange; hrefFor: (range: HistoryRange) => string }) {
   return (
-    <nav aria-label="Time range" className="flex rounded-lg border border-border p-0.5 text-xs">
+    <nav aria-label="Time range" className="flex border border-border p-0.5 text-xs">
       {HISTORY_RANGES.map((r) => {
         const current = r === range;
         return (
@@ -65,7 +63,7 @@ function RangeTabs({ range, hrefFor }: { range: HistoryRange; hrefFor: (range: H
             replace
             aria-current={current ? "true" : undefined}
             aria-label={RANGE_LABELS[r].long[0].toUpperCase() + RANGE_LABELS[r].long.slice(1)}
-            className={`rounded-md px-2.5 py-1.5 font-medium focus-visible:outline-2 focus-visible:outline-accent ${
+            className={`px-2.5 py-1.5 font-medium focus-visible:outline-2 focus-visible:outline-accent ${
               current ? "bg-accent text-accent-fg" : "text-muted hover:text-foreground"
             }`}
           >

@@ -30,12 +30,12 @@ export function PrivacyToggle({ withLabel = false }: { withLabel?: boolean }) {
       aria-pressed={enabled}
       aria-label={withLabel ? undefined : label}
       title={label}
-      className={withLabel ? "btn" : "rounded px-2 py-2 text-[#e7c9a0] hover:text-gold-light"}
+      className={withLabel ? "btn" : "px-2 py-2 text-[#e7c9a0] hover:text-gold-light"}
     >
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="inline-block align-[-3px]">
-        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-        <circle cx="12" cy="12" r="3" />
-        {enabled && <path d="M3 3l18 18" />}
+      <svg viewBox="0 0 12 12" width="22" height="22" shapeRendering="crispEdges" aria-hidden="true" className="inline-block align-[-5px]">
+        <path d="M1 6h1V5h2V4h4v1h2v1h1v1h-1v1H8v1H4V8H2V7H1z" fill="currentColor" />
+        <rect x="5" y="5" width="2" height="2" fill="var(--lacquer)" />
+        {enabled && <path d="M1 1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h-1v-1h-1v-1H9V9H8V8H7V7H6V6H5V5H4V4H3V3H2V2H1z" fill="currentColor" />}
       </svg>
       {withLabel && <span className="ml-2">{enabled ? "Private mode is on — show balances" : "Turn on private mode"}</span>}
     </button>

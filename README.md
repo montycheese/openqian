@@ -8,12 +8,12 @@ A private, self-hosted net worth and portfolio tracker. Think Kubera, but it run
 - **View-only.** It can't trade, transfer, or sign anything.
 
 <p align="center">
-  <img src="docs/screenshot-dashboard.png" alt="OpenQian dashboard: red-lacquer panels with gold trim on rice paper, a gold ingot above the net worth, milestone coins, a net worth chart drawn as an ink stroke, and accounts grouped into categories with Chinese labels" width="720">
+  <img src="docs/screenshot-dashboard.png" alt="OpenQian dashboard in a pixel-art game style: bevelled red-lacquer panels with gold trim, a pixel gold ingot above the net worth, a row of milestone coins, a stepped pixel chart, and accounts shown as inventory slots with sprites and stack numbers" width="720">
   <img src="docs/screenshot-phone.png" alt="OpenQian dashboard on a phone" width="200">
 </p>
 <p align="center"><sub>Sample data. Try it yourself with <code>pnpm demo</code>.</sub></p>
 
-The look is inspired by 2000s Chinese MMOs: a treasury (金库) of red lacquer and gold, with 钱 (*qián*, money) as its square-holed coin emblem. Tiles are bordered by their share of your assets, from white jade (白玉, under 1%) to vermilion (朱, 20% or more).
+The look is an early-2000s game inventory — think RuneScape bank slots — dressed as a Chinese treasury (金库) of red lacquer and gold, with 钱 (*qián*, money) as its square-holed coin emblem. Each account is a pixel-art item with a stack count; slots are bordered by their share of your assets, from white jade (白玉, under 1%) to vermilion (朱, 20% or more).
 
 ## What it does
 

@@ -25,7 +25,7 @@ import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney, formatNumber } from "@/lib/money";
 import { Sensitive } from "@/components/sensitive";
 import { getAccountDetail, getAccountSeries, getNetWorth, listCategories } from "@/lib/queries";
-import { Seal, Tile, type Face } from "@/components/treasury";
+import { gemFor, Seal, Sprite, SPRITES } from "@/components/treasury";
 import { CATEGORY_ZH, gradeFor } from "@/lib/treasury";
 
 export default async function AccountPage({ params, searchParams }: PageProps<"/accounts/[id]">) {
@@ -39,7 +39,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
   const { assets: totalAssets } = await getNetWorth();
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
       <div className="space-y-5">
         <Link href="/" className="text-sm no-underline hover:underline">
           ← Dashboard
@@ -113,7 +113,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
             </p>
           )}
           {summary.missingRates.length > 0 && (
-            <p className="mt-3 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
+            <p className="mt-3 bg-warning-bg px-3 py-2 text-sm text-warning-fg">
               No exchange rate yet for {summary.missingRates.join(", ")}.
             </p>
           )}
@@ -129,7 +129,6 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
             points={chart.points}
             range={range}
             hrefFor={(r) => rangeHref(`/accounts/${account.id}`, {}, r)}
-            step={account.kind === "value"}
             invert={isDebt}
           />
         )}
@@ -301,8 +300,11 @@ function HoldingFields({ account, holding }: { account: Account; holding?: Holdi
   );
 }
 
-function holdingFace(type: Holding["type"]): Face {
-  return type === "cash" ? "coin" : type === "crypto" ? "jade" : type === "bond" ? "seal" : "paper";
+function holdingSprite(h: Holding) {
+  if (h.type === "cash") return SPRITES.coin;
+  if (h.type === "crypto") return gemFor(`${h.symbol ?? ""} ${h.network ?? ""}`);
+  if (h.type === "bond") return SPRITES.deed;
+  return SPRITES.scroll;
 }
 
 function HoldingsSection({ account, positions, totalAssets }: { account: Account; positions: Holding[]; totalAssets: number }) {
@@ -320,7 +322,12 @@ function HoldingsSection({ account, positions, totalAssets }: { account: Account
           <li key={h.id}>
             <details>
               <summary className="paper flex cursor-pointer list-none items-center gap-3 px-2.5 py-2 hover:bg-[#fffaf0]">
-                <Tile label={(h.symbol ?? h.name).slice(0, 5)} face={holdingFace(h.type)} gradeColor={gradeFor(h.marketValue, totalAssets).color} size={44} />
+                <span
+                  className="well flex h-12 w-12 shrink-0 items-center justify-center"
+                  style={{ boxShadow: `inset 0 0 0 2px ${gradeFor(h.marketValue, totalAssets).color}` }}
+                >
+                  <Sprite sprite={holdingSprite(h)} size={32} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium">{h.symbol ?? h.name}</span>

@@ -162,7 +162,7 @@ function Preview({
           </p>
         )}
         {warnings.map((w) => (
-          <p key={w} className="rounded-lg bg-warning-bg px-3 py-2 text-warning-fg">
+          <p key={w} className="bg-warning-bg px-3 py-2 text-warning-fg">
             {w}
           </p>
         ))}

@@ -35,10 +35,15 @@ export function NavMenu({ links }: { links: readonly (readonly [string, string])
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
-        className="flex h-11 w-11 items-center justify-center rounded border border-[#b08a3a] text-gold-light"
+        className="flex h-11 w-11 items-center justify-center border-[3px] bg-[#5a0d0d] text-gold-light"
+        style={{ borderColor: "#9b2a1c #2a0404 #2a0404 #9b2a1c" }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+        <svg width="22" height="22" viewBox="0 0 12 12" shapeRendering="crispEdges" fill="currentColor" aria-hidden="true">
+          {open ? (
+            <path d="M2 2h2v1h1v1h2V3h1V2h2v2H9v1H8v2h1v1h1v2H8V9H7V8H5v1H4v1H2V8h1V7h1V5H3V4H2z" />
+          ) : (
+            <path d="M2 3h8v1H2zM2 6h8v1H2zM2 9h8v1H2z" />
+          )}
         </svg>
       </button>
       {open && (
@@ -50,7 +55,7 @@ export function NavMenu({ links }: { links: readonly (readonly [string, string])
                   href={href}
                   onClick={() => setOpen(false)}
                   aria-current={pathname === href ? "page" : undefined}
-                  className="block rounded px-3 py-3 text-base text-[#e7c9a0] hover:bg-[#8a1c1c] hover:text-gold-light aria-[current=page]:text-gold-light"
+                  className="block px-3 py-3 text-base text-[#e7c9a0] hover:bg-[#8a1c1c] hover:text-gold-light aria-[current=page]:text-gold-light"
                 >
                   {label}
                 </Link>

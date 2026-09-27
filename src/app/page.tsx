@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/action-form";
-import { Amount } from "@/components/money";
 import { HistoryCard } from "@/components/history-card";
 import { refreshAll } from "@/lib/refresh";
 import { formatFullDate, parseRange, pointsSince, rangeHref, withLatestPoint, type ChartPoint } from "@/lib/chart";
@@ -9,8 +8,8 @@ import { rangeStart, type HistoryRange } from "@/lib/history";
 import { formatMoney } from "@/lib/money";
 import { Sensitive } from "@/components/sensitive";
 import { countSyncedSources, getNetWorth, getNetWorthSeries } from "@/lib/queries";
-import { CoinEmblem, faceForCategory, GradeLegend, Ingot, MilestoneCoins, Tile } from "@/components/treasury";
-import { CATEGORY_ZH, gradeFor, nextMilestone } from "@/lib/treasury";
+import { CoinEmblem, GradeLegend, Ingot, MilestoneCoins, Slot, spriteForAccount } from "@/components/treasury";
+import { CATEGORY_ZH, gradeFor, nextMilestone, stackColor, stackLabel } from "@/lib/treasury";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
@@ -28,15 +27,15 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const milestone = nextMilestone(nw.netWorth);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[310px_minmax(0,1fr)] lg:items-start">
       <aside aria-label="Net worth" className="card flex flex-col gap-4 p-5">
         <div className="flex items-center gap-4 border-b border-[#d8c49a] pb-4 lg:flex-col lg:text-center">
-          <Ingot width={96} />
+          <Ingot size={84} />
           <div>
             <p className="text-sm text-muted">
               Net worth <span className="brush text-lacquer">净资产</span>
             </p>
-            <p className="num text-3xl font-bold sm:text-4xl">
+            <p className="num text-2xl sm:text-3xl">
               <Sensitive>{formatMoney(nw.netWorth, cur)}</Sensitive>
             </p>
           </div>
@@ -90,7 +89,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
         )}
 
         {nw.missingRates.length > 0 && (
-          <p className="rounded border border-border bg-warning-bg px-4 py-3 text-sm text-warning-fg">
+          <p className="border border-border bg-warning-bg px-4 py-3 text-sm text-warning-fg">
             No exchange rate for {nw.missingRates.join(", ")}, so those amounts aren&apos;t in the totals. Click Refresh
             all, or{" "}
             <Link href="/settings" className="underline">
@@ -115,55 +114,39 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             .filter((c) => c.accounts.length > 0)
             .map(({ category, accounts, total }) => {
               const isDebt = category.kind === "debt";
-              const face = faceForCategory(category.name, category.kind);
               const zh = CATEGORY_ZH[category.name];
               return (
-                <section key={category.id} className="lacquer min-w-0 p-3" aria-label={category.name}>
+                <section key={category.id} className="lacquer min-w-0 p-2.5" aria-label={category.name}>
                   <header className="flex items-baseline justify-between gap-2 px-1 pb-2">
-                    <h2 className="font-bold">
+                    <h2 className="pixel-shadow text-lg font-bold">
                       {category.name} {zh && <span className="brush font-normal text-[#f3d27a]">{zh}</span>}
                     </h2>
-                    <span className="num font-semibold text-[#fff3c4]">
+                    <span className="num pixel-shadow text-sm text-[#fff3c4]">
                       <Sensitive>{formatMoney(isDebt ? -total : total, cur)}</Sensitive>
                     </span>
                   </header>
-                  <ul className="space-y-1.5">
+                  <ul className="well grid grid-cols-3 gap-1.5 p-1.5 sm:grid-cols-4">
                     {accounts.map((s) => (
-                      <li key={s.account.id}>
-                        <Link
+                      <li key={s.account.id} className="min-w-0">
+                        <Slot
                           href={`/accounts/${s.account.id}`}
-                          className={`paper flex items-center gap-3 px-2.5 py-2 hover:bg-[#fffaf0] ${
-                            s.account.isExcluded || s.account.isHidden ? "opacity-60" : ""
-                          }`}
-                        >
-                          <Tile
-                            label={tileLabel(s.account.name)}
-                            face={face}
-                            gradeColor={isDebt ? "#6b6258" : gradeFor(s.base, nw.assets).color}
-                            size={44}
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-semibold">{s.account.name}</span>
-                            <span className="block truncate text-xs text-muted">
-                              {[
-                                s.account.institution,
-                                s.account.accountMask && `…${s.account.accountMask}`,
-                                s.isEmpty ? "No value yet" : s.asOf && `as of ${s.asOf}`,
-                                s.account.isExcluded && "excluded",
-                                s.account.isHidden && "hidden",
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </span>
-                          <Amount
-                            base={s.base}
-                            baseCurrency={cur}
-                            native={s.native}
-                            negative={isDebt}
-                            unconverted={s.missingRates.length > 0 && s.base === 0}
-                          />
-                        </Link>
+                          name={s.account.name}
+                          title={[
+                            s.account.name,
+                            s.account.institution,
+                            s.account.accountMask && `…${s.account.accountMask}`,
+                            s.isEmpty ? "No value yet" : s.asOf && `as of ${s.asOf}`,
+                            s.account.isExcluded && "excluded",
+                            s.account.isHidden && "hidden",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          sprite={spriteForAccount(category.name, category.kind, `${s.account.name} ${s.account.institution ?? ""}`)}
+                          stack={s.isEmpty ? "–" : <Sensitive>{stackLabel(s.base)}</Sensitive>}
+                          stackColor={stackColor(s.base, isDebt)}
+                          gradeColor={isDebt ? "#6b6258" : gradeFor(s.base, nw.assets).color}
+                          dimmed={s.account.isExcluded || s.account.isHidden}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -182,12 +165,6 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
       </div>
     </div>
   );
-}
-
-/** Two-letter label for an account tile: initials of the first two words, e.g. "Hot wallet" → "HW". */
-function tileLabel(name: string): string {
-  const words = name.match(/[\p{L}\p{N}]+/gu) ?? ["?"];
-  return (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
 }
 
 const HISTORY_NOTE = "Net worth history builds up each day you refresh or update values.";
