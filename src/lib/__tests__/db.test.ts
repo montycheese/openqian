@@ -18,3 +18,30 @@ describe("openDatabase", () => {
     expect(db.select().from(valuations).all()).toHaveLength(0);
   });
 });
+
+describe("migrations added after the database was opened", () => {
+  it("are detected by migrationsVersion and applied by migrate", async () => {
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { migrate } = await import("drizzle-orm/better-sqlite3/migrator");
+    const { migrationsVersion } = await import("@/lib/db");
+
+    const folder = fs.mkdtempSync(path.join(os.tmpdir(), "oc-migrations-"));
+    fs.cpSync(path.join(process.cwd(), "drizzle"), folder, { recursive: true });
+    const db = openDatabase(":memory:", folder);
+    const before = migrationsVersion(folder);
+
+    fs.writeFileSync(path.join(folder, "9999_probe.sql"), "CREATE TABLE `probe` (`id` integer PRIMARY KEY);");
+    const journalPath = path.join(folder, "meta", "_journal.json");
+    const journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+    journal.entries.push({ ...journal.entries.at(-1), idx: journal.entries.length, tag: "9999_probe", when: Date.now() });
+    fs.writeFileSync(journalPath, JSON.stringify(journal));
+
+    expect(migrationsVersion(folder)).not.toBe(before);
+    migrate(db, { migrationsFolder: folder });
+    const { sql } = await import("drizzle-orm");
+    expect(db.get(sql`select name from sqlite_master where name = 'probe'`)).toBeTruthy();
+    fs.rmSync(folder, { recursive: true });
+  });
+});

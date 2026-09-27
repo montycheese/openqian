@@ -52,13 +52,14 @@ Credentials for future API sources are encrypted with a key kept in your OS keyc
 ## Development
 
 ```sh
+pnpm verify       # typecheck, lint, tests, production build, and a smoke test of every page
 pnpm test         # unit + integration tests
 pnpm typecheck
 pnpm lint
 pnpm db:generate  # create a migration after editing src/lib/db/schema.ts
 ```
 
-Migrations are applied automatically on startup.
+Migrations are applied automatically on startup (and, under `pnpm dev`, as soon as a new one appears).
 
 ## License
 
