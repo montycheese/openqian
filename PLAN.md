@@ -54,7 +54,7 @@ OpenChieng is a self-hosted, view-only net worth and portfolio tracker (in the s
 | **Schwab Trader API** | Schwab positions and balances | User's own Schwab developer app (free) | Official, direct, no middleman. Requires app approval; refresh token expires ~every 7 days → re-login flow. Needs an HTTPS callback (`https://127.0.0.1` via mkcert). |
 | **CCXT** | Crypto exchange balances | Read-only exchange API keys | Warn if a key appears to have trade/withdraw permissions. |
 | **Price feeds** | Quotes for tickers (manual and imported) and crypto | None by default | Pluggable; default `yahoo-finance2`, crypto via CoinGecko free tier. |
-| **FX rates** | Currency conversion | None (Frankfurter / ECB) | Manual override for unsupported currencies. |
+| **FX rates** | Currency conversion | None (Frankfurter v2) | Blends central-bank reference rates (covers TWD etc.); manual override for anything missing. |
 
 ### Optional adapters (not on the core roadmap)
 
@@ -155,10 +155,10 @@ General importer rules:
 1. ✅ **Foundation** — scaffold, schema (currency on every amount), encrypted secret storage, manual assets, dashboard, institution picker.
 2. ✅ **File import** *(pulled forward)* — generic positions parser for CSV/XLSX (header detection, multi-account files, cash detection, total-row checksum), preview + account matching by account number. Verified on a real Morgan Stanley export; Fidelity/Schwab layouts covered by synthetic tests and still need real sample files.
 3. ✅ **Crypto exchanges** *(pulled forward)* — ccxt connections (Coinbase, Kraken, Gemini, Binance.US) with encrypted keys, Coinbase key-permission check (refuses trade/transfer keys), balances priced in USD from the exchange's own markets, per-connection and "refresh all".
-4. **Prices & FX** — price feeds for manual tickers, FX fetch/cache, base-currency conversion, dual display.
+4. ✅ **Prices & FX** — Yahoo Finance (stocks/ETFs/funds) and CoinGecko (crypto) quotes cached in `prices`; manual and imported holdings are repriced on refresh (exchange-connected accounts use their exchange's prices). Frankfurter v2 FX rates with inverse/cross conversion and manual overrides in Settings. One "Refresh all" button runs connections → prices → FX.
 5. **Snapshots & history charts.**
 6. **Schwab Trader API adapter.**
-7. **OFX/QFX import** for bank balances (Chase, Wells Fargo).
+7. ✅ **OFX/QFX import** *(pulled forward)* — bank and credit card balances (SGML and XML OFX) into value accounts, brokerage positions from `INVPOSLIST`. Synthetic Chase/Wells Fargo-style fixtures; needs a real download to confirm.
 8. v2 features; optional aggregator adapters as community contributions.
 
 ## Open-source readiness
