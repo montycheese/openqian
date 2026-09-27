@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { ActionState } from "@/lib/actions";
 import { getDb } from "@/lib/db";
 import { clearManualRate, readBaseCurrency, refreshFxRates, setManualRate } from "@/lib/fx";
+import { recordSnapshot } from "@/lib/snapshots";
 
 const currency = z
   .string()
@@ -16,8 +17,15 @@ const fields = (formData: FormData) => Object.fromEntries(formData.entries());
 const fail = (error: z.ZodError): ActionState => ({ error: error.issues[0]?.message ?? "Invalid input" });
 
 export async function refreshFxAction(): Promise<ActionState> {
-  const result = await refreshFxRates(getDb());
+  const result = await refreshFxStep();
+  recordSnapshot();
   revalidatePath("/", "layout");
+  return result;
+}
+
+/** Refreshes rates without taking a snapshot, for use inside refreshAll. */
+export async function refreshFxStep(): Promise<ActionState> {
+  const result = await refreshFxRates(getDb());
   if (result.error) return { error: `Couldn't refresh rates: ${result.error}` };
   if (result.unsupported.length > 0) {
     return { ok: true, message: `No published rate for ${result.unsupported.join(", ")}. Set one manually below.` };
@@ -38,6 +46,7 @@ export async function saveManualRate(_: ActionState, formData: FormData): Promis
   const base = readBaseCurrency(db);
   if (parsed.data.currency === base) return { error: `${base} is already the base currency` };
   setManualRate(db, parsed.data.currency, base, parsed.data.rate);
+  recordSnapshot();
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -46,6 +55,7 @@ export async function clearManualRateAction(_: ActionState, formData: FormData):
   const parsed = z.object({ base: currency, quote: currency }).safeParse(fields(formData));
   if (!parsed.success) return fail(parsed.error);
   clearManualRate(getDb(), parsed.data.base, parsed.data.quote);
+  recordSnapshot();
   revalidatePath("/", "layout");
   return { ok: true };
 }

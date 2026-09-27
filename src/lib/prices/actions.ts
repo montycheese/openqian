@@ -3,12 +3,20 @@
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/actions";
 import { getDb } from "@/lib/db";
+import { recordSnapshot } from "@/lib/snapshots";
 import { refreshPrices } from "./index";
 
 /** Refreshes feed prices for all manually tracked and imported holdings. */
 export async function refreshPricesAction(): Promise<ActionState> {
-  const { updated, unpriced, errors } = await refreshPrices(getDb());
+  const result = await refreshPricesStep();
+  recordSnapshot();
   revalidatePath("/", "layout");
+  return result;
+}
+
+/** Refreshes prices without taking a snapshot, for use inside refreshAll. */
+export async function refreshPricesStep(): Promise<ActionState> {
+  const { updated, unpriced, errors } = await refreshPrices(getDb());
 
   const notes = [
     unpriced.length > 0 && `No price found for ${unpriced.join(", ")}; those keep their last value.`,

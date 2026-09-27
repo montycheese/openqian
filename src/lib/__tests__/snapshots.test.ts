@@ -1,8 +1,38 @@
-import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { eq, sql } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, type DB } from "@/lib/db";
 import { accounts, categories, fxRates, holdings, settings, snapshotAccounts, snapshots, valuations } from "@/lib/db/schema";
-import { localDate, takeSnapshot } from "@/lib/snapshots";
+import { localDate, recordSnapshot, takeSnapshot } from "@/lib/snapshots";
+
+process.env.OPENCHIENG_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
+
+vi.mock("@/lib/db", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/db")>()), getDb: () => db }));
+vi.mock("@/lib/snapshots", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/snapshots")>();
+  return { ...mod, recordSnapshot: vi.fn(mod.recordSnapshot) };
+});
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => {
+    throw Object.assign(new Error("NEXT_REDIRECT"), { url });
+  },
+}));
+vi.mock("@/lib/prices", () => ({
+  // Stands in for a feed: every holding is repriced to 999.
+  refreshPrices: vi.fn(async (d: DB) => {
+    d.update(holdings).set({ marketValue: 999 }).run();
+    return { updated: 1, unpriced: [], errors: [] };
+  }),
+}));
+vi.mock("@/lib/connections/exchange", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/connections/exchange")>();
+  return {
+    ...mod,
+    createExchange: async () => ({}),
+    excessPermissions: async () => [],
+    fetchPositions: async () => ({ ...mod.toPositions({ BTC: 1 }, { BTC: 100_000 }), warnings: [] }),
+  };
+});
 
 let db: DB;
 
@@ -130,5 +160,135 @@ describe("takeSnapshot", () => {
     expect(rows[broker.id]).toMatchObject({ nativeValue: null, nativeCurrency: null, baseValue: 700 });
     expect(rows[empty.id]).toMatchObject({ nativeValue: 0, nativeCurrency: "EUR", baseValue: 0 });
     expect(JSON.parse(snap.fxRates)).toEqual({ EUR: 2 });
+  });
+});
+
+describe("automatic capture", () => {
+  const form = (values: Record<string, string>) => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(values)) fd.set(k, v);
+    return fd;
+  };
+  const latest = () => db.select().from(snapshots).where(eq(snapshots.date, localDate())).get();
+  const redirected = (p: Promise<unknown>) => p.catch((err: { url?: string }) => err.url);
+
+  beforeEach(() => {
+    vi.mocked(recordSnapshot).mockClear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("captures after account, valuation, and holding changes", async () => {
+    const actions = await import("@/lib/actions");
+    await redirected(
+      actions.createAccount({}, form({ name: "Checking", categoryId: category("Cash").id, kind: "value", currency: "USD", initialValue: "100" })),
+    );
+    expect(latest()?.netWorth).toBe(100);
+
+    const checking = db.select().from(accounts).get()!;
+    await actions.addValuation({}, form({ accountId: checking.id, date: "2999-01-01", value: "250" }));
+    expect(latest()?.netWorth).toBe(250);
+
+    await actions.updateAccount({}, form({ id: checking.id, name: "Checking", categoryId: category("Cash").id, currency: "USD", isExcluded: "on" }));
+    expect(latest()?.netWorth).toBe(0);
+
+    await redirected(actions.createAccount({}, form({ name: "Broker", categoryId: category("Investments").id, kind: "holdings", currency: "USD" })));
+    const broker = db.select().from(accounts).where(eq(accounts.name, "Broker")).get()!;
+    await actions.saveHolding({}, form({ accountId: broker.id, symbol: "VOO", name: "", type: "etf", quantity: "2", price: "50", marketValue: "", costBasis: "", currency: "USD" }));
+    expect(latest()?.netWorth).toBe(100);
+
+    const holding = db.select().from(holdings).get()!;
+    await actions.deleteHolding(form({ id: holding.id }));
+    expect(latest()?.netWorth).toBe(0);
+
+    await redirected(actions.deleteAccount({}, form({ id: broker.id, confirm: "on" })));
+    expect(rowsOf(latest()!.id).map((r) => r.accountId)).toEqual([checking.id]);
+  });
+
+  it("captures after a base currency change and manual FX rates", async () => {
+    const { setBaseCurrency } = await import("@/lib/actions");
+    const { saveManualRate, clearManualRateAction } = await import("@/lib/fx/actions");
+    const eur = account({ name: "Euro", category: "Cash", currency: "EUR" });
+    value(eur.id, 100, "EUR");
+
+    await saveManualRate({}, form({ currency: "EUR", rate: "1.1" }));
+    expect(latest()).toMatchObject({ baseCurrency: "USD", fxRates: JSON.stringify({ EUR: 1.1 }) });
+    expect(latest()?.netWorth).toBeCloseTo(110);
+
+    await setBaseCurrency({}, form({ baseCurrency: "EUR" }));
+    expect(latest()).toMatchObject({ baseCurrency: "EUR", netWorth: 100 });
+
+    await setBaseCurrency({}, form({ baseCurrency: "USD" }));
+    await clearManualRateAction({}, form({ base: "EUR", quote: "USD" }));
+    expect(latest()).toMatchObject({ baseCurrency: "USD", netWorth: 0, fxRates: "{}" });
+  });
+
+  it("captures after refreshing FX, prices, and a connection", async () => {
+    const { refreshFxAction } = await import("@/lib/fx/actions");
+    const { refreshPricesAction } = await import("@/lib/prices/actions");
+    const { addConnection, refreshConnection } = await import("@/lib/connections/actions");
+    const { connections } = await import("@/lib/db/schema");
+
+    const broker = account({ name: "Broker", category: "Investments", kind: "holdings" });
+    db.insert(holdings).values({ accountId: broker.id, symbol: "VOO", name: "VOO", quantity: 1, price: 1, marketValue: 1, currency: "USD" }).run();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "down" }, { status: 503 })));
+    await refreshFxAction();
+    expect(latest()?.netWorth).toBe(1);
+
+    await refreshPricesAction();
+    expect(latest()?.netWorth).toBe(999);
+
+    await addConnection({}, form({ exchange: "kraken", name: "", apiKey: "k", secret: "s" }));
+    expect(latest()?.netWorth).toBe(999 + 100_000);
+
+    db.delete(snapshots).run();
+    const conn = db.select().from(connections).get()!;
+    await refreshConnection({}, form({ id: conn.id }));
+    expect(latest()?.netWorth).toBe(999 + 100_000);
+  });
+
+  it("captures after applying an import", async () => {
+    const { applyImport } = await import("@/lib/import/actions");
+    const payload = {
+      fileName: "Positions.csv",
+      institution: null,
+      asOf: "2026-09-01",
+      accounts: [
+        {
+          target: "new",
+          name: "Brokerage",
+          categoryId: category("Investments").id,
+          currency: "USD",
+          mask: null,
+          holdings: [{ symbol: "ACME", name: "ACME", type: "stock", quantity: 2, price: 10, marketValue: 20, costBasis: null }],
+        },
+      ],
+    };
+    const res = await applyImport({}, form({ payload: JSON.stringify(payload) }));
+    expect(res.error).toBeUndefined();
+    expect(latest()?.netWorth).toBe(20);
+  });
+
+  it("refreshAll takes one snapshot at the end", async () => {
+    const { refreshAll } = await import("@/lib/refresh");
+    const broker = account({ name: "Broker", category: "Investments", kind: "holdings" });
+    db.insert(holdings).values({ accountId: broker.id, symbol: "VOO", name: "VOO", quantity: 1, price: 1, marketValue: 1, currency: "USD" }).run();
+
+    await refreshAll();
+    expect(recordSnapshot).toHaveBeenCalledTimes(1);
+    expect(latest()?.netWorth).toBe(999);
+  });
+
+  it("never fails the user's action when the snapshot fails", async () => {
+    const { addValuation } = await import("@/lib/actions");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cash = account({ name: "Checking", category: "Cash" });
+    db.run(sql`DROP TABLE snapshot_accounts`);
+
+    expect(await addValuation({}, form({ accountId: cash.id, date: "2026-09-01", value: "5" }))).toEqual({ ok: true });
+    expect(db.select().from(valuations).all()).toHaveLength(1);
+    expect(error).toHaveBeenCalledWith("Couldn't record net worth snapshot:", expect.any(Error));
+    error.mockRestore();
   });
 });

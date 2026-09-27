@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, holdingTypes, holdings, settings, valuations } from "@/lib/db/schema";
 import { deleteSecret } from "@/lib/secrets";
+import { recordSnapshot } from "@/lib/snapshots";
 
 // Server Actions are reachable by direct POST. The server only listens on
 // 127.0.0.1 and Next.js rejects cross-origin action requests, so there is no
@@ -41,6 +42,12 @@ function fail(result: { error: z.ZodError }): ActionState {
 
 function refresh() {
   revalidatePath("/", "layout");
+}
+
+/** After a change to values: capture today's snapshot, then revalidate. */
+function refreshValues() {
+  recordSnapshot();
+  refresh();
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -81,7 +88,7 @@ export async function createAccount(_: ActionState, formData: FormData): Promise
     }
     return row.id;
   });
-  refresh();
+  refreshValues();
   redirect(`/accounts/${id}`);
 }
 
@@ -106,7 +113,7 @@ export async function updateAccount(_: ActionState, formData: FormData): Promise
     .set({ ...values, isHidden: isHidden === "on", isExcluded: isExcluded === "on" })
     .where(eq(accounts.id, id))
     .run();
-  refresh();
+  refreshValues();
   return { ok: true };
 }
 
@@ -119,7 +126,7 @@ export async function deleteAccount(_: ActionState, formData: FormData): Promise
     deleteSecret(db, `connection:${c.id}`);
   }
   db.delete(accounts).where(eq(accounts.id, parsed.data.id)).run();
-  refresh();
+  refreshValues();
   redirect("/");
 }
 
@@ -149,14 +156,14 @@ export async function addValuation(_: ActionState, formData: FormData): Promise<
   db.insert(valuations)
     .values({ ...rest, value: finalValue, quantity, unitPrice, currency: account.currency })
     .run();
-  refresh();
+  refreshValues();
   return { ok: true };
 }
 
 export async function deleteValuation(formData: FormData) {
   const id = z.string().parse(formData.get("id"));
   getDb().delete(valuations).where(eq(valuations.id, id)).run();
-  refresh();
+  refreshValues();
 }
 
 // ---------- Holdings ----------
@@ -206,14 +213,14 @@ export async function saveHolding(_: ActionState, formData: FormData): Promise<A
   } else {
     db.insert(holdings).values(row).run();
   }
-  refresh();
+  refreshValues();
   return { ok: true };
 }
 
 export async function deleteHolding(formData: FormData) {
   const id = z.string().parse(formData.get("id"));
   getDb().delete(holdings).where(eq(holdings.id, id)).run();
-  refresh();
+  refreshValues();
 }
 
 // ---------- Settings ----------
@@ -226,7 +233,7 @@ export async function setBaseCurrency(_: ActionState, formData: FormData): Promi
     .values({ key: "base_currency", value: parsed.data.baseCurrency })
     .onConflictDoUpdate({ target: settings.key, set: { value: parsed.data.baseCurrency } })
     .run();
-  refresh();
+  refreshValues();
   return { ok: true };
 }
 
@@ -255,7 +262,7 @@ export async function saveCategory(_: ActionState, formData: FormData): Promise<
   } else {
     db.insert(categories).values(values).run();
   }
-  refresh();
+  refreshValues();
   return { ok: true };
 }
 

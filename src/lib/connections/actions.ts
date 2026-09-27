@@ -7,6 +7,7 @@ import type { ActionState } from "@/lib/actions";
 import { getDb } from "@/lib/db";
 import { accounts, categories, connections, exchanges, holdings } from "@/lib/db/schema";
 import { deleteSecret, getSecret, setSecret } from "@/lib/secrets";
+import { recordSnapshot } from "@/lib/snapshots";
 import {
   createExchange,
   EXCHANGE_LABELS,
@@ -113,6 +114,7 @@ export async function addConnection(_: ConnectionState, formData: FormData): Pro
     .values({ id: connectionId, provider: "ccxt", exchange: exchangeId, accountId: account.id, lastRefreshedAt: new Date() })
     .run();
   replaceHoldings(account.id, result.positions);
+  recordSnapshot();
   revalidatePath("/", "layout");
   return { ok: true, message: refreshMessage(result) };
 }
@@ -141,10 +143,12 @@ async function refresh(connectionId: string): Promise<ConnectionState> {
 
 export async function refreshConnection(_: ConnectionState, formData: FormData): Promise<ConnectionState> {
   const result = await refresh(z.string().parse(formData.get("id")));
+  recordSnapshot();
   revalidatePath("/", "layout");
   return result;
 }
 
+/** Refreshes every connection without taking a snapshot; refreshAll takes one at the end. */
 export async function refreshAllConnections(): Promise<ConnectionState> {
   const all = getDb().select({ id: connections.id }).from(connections).all();
   const results = await Promise.all(all.map((c) => refresh(c.id)));

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { accounts, categories, holdingTypes, holdings, imports, valuations } from "@/lib/db/schema";
+import { recordSnapshot } from "@/lib/snapshots";
 import { parseOfx, type BalancesImport } from "./ofx";
 import { parseHoldingsTable, type HoldingsImport } from "./parse-holdings";
 import { readTable } from "./read-table";
@@ -187,6 +188,7 @@ export async function applyImport(_: ApplyState, formData: FormData): Promise<Ap
       }
       return results;
     });
+    recordSnapshot();
     revalidatePath("/", "layout");
     return { imported };
   } catch (err) {
