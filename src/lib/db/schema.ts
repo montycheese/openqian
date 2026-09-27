@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, index, primaryKey, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const id = () =>
   text("id")
@@ -180,6 +180,40 @@ export const fxRates = sqliteTable(
   (t) => [uniqueIndex("fx_rates_date_pair_source_idx").on(t.date, t.base, t.quote, t.source)],
 );
 
+/** Net worth for one day; the latest capture of a day replaces earlier ones. */
+export const snapshots = sqliteTable("snapshots", {
+  id: id(),
+  /** YYYY-MM-DD, one row per day. */
+  date: text("date").notNull().unique(),
+  baseCurrency: text("base_currency").notNull(),
+  assets: real("assets").notNull(),
+  debts: real("debts").notNull(),
+  netWorth: real("net_worth").notNull(),
+  /** JSON map of currency → base units per 1 unit, as used for this snapshot. */
+  fxRates: text("fx_rates").notNull().default("{}"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** Each account's value within a snapshot. */
+export const snapshotAccounts = sqliteTable(
+  "snapshot_accounts",
+  {
+    snapshotId: text("snapshot_id")
+      .notNull()
+      .references(() => snapshots.id, { onDelete: "cascade" }),
+    // No FK: history keeps rows for accounts deleted later.
+    accountId: text("account_id").notNull(),
+    categoryId: text("category_id").notNull(),
+    nativeValue: real("native_value"),
+    nativeCurrency: text("native_currency"),
+    baseValue: real("base_value").notNull(),
+    /** False when excluded or hidden, i.e. not part of that day's totals. */
+    counted: integer("counted", { mode: "boolean" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.snapshotId, t.accountId] }), index("snapshot_accounts_account_idx").on(t.accountId)],
+);
+
 export type Category = typeof categories.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Valuation = typeof valuations.$inferSelect;
@@ -189,3 +223,5 @@ export type Connection = typeof connections.$inferSelect;
 export type ExchangeId = (typeof exchanges)[number];
 export type Price = typeof prices.$inferSelect;
 export type FxRate = typeof fxRates.$inferSelect;
+export type Snapshot = typeof snapshots.$inferSelect;
+export type SnapshotAccount = typeof snapshotAccounts.$inferSelect;
