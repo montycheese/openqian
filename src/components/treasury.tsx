@@ -79,8 +79,10 @@ export function GradeLegend() {
         {GRADES.map((g) => (
           <li key={g.zh} className="contents">
             <span className="h-3.5 w-3.5 rounded-full border border-[#b8b3a0]" style={{ background: g.color }} />
-            <span>{g.label}</span>
-            <span className="brush text-lacquer">{g.zh}</span>
+            <span>
+              {g.name} <span className="brush text-lacquer">{g.zh}</span>
+            </span>
+            <span className="text-muted">{g.label}</span>
           </li>
         ))}
       </ul>

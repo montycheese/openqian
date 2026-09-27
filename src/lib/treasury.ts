@@ -1,10 +1,10 @@
 /** Border colour of an item by its share of total assets (vermilion ≥ 20% down to white jade). */
 export const GRADES = [
-  { min: 0.2, color: "#c0392b", zh: "朱", label: "20% or more" },
-  { min: 0.1, color: "#d4a84b", zh: "金", label: "10–20%" },
-  { min: 0.05, color: "#0f7a4f", zh: "翠", label: "5–10%" },
-  { min: 0.01, color: "#7fb89a", zh: "青玉", label: "1–5%" },
-  { min: 0, color: "#e3e0d2", zh: "白玉", label: "Under 1%" },
+  { min: 0.2, color: "#c0392b", zh: "朱", name: "Vermilion", label: "20% or more" },
+  { min: 0.1, color: "#d4a84b", zh: "金", name: "Gold", label: "10–20%" },
+  { min: 0.05, color: "#0f7a4f", zh: "翠", name: "Imperial jade", label: "5–10%" },
+  { min: 0.01, color: "#7fb89a", zh: "青玉", name: "Green jade", label: "1–5%" },
+  { min: 0, color: "#e3e0d2", zh: "白玉", name: "White jade", label: "Under 1%" },
 ] as const;
 
 export function gradeFor(value: number, totalAssets: number) {
