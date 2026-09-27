@@ -1,4 +1,4 @@
-# OpenChieng
+# OpenQian
 
 A private, self-hosted net worth and portfolio tracker. Think Kubera, but it runs **only on your own computer**, costs nothing, and never moves money.
 
@@ -38,8 +38,8 @@ corepack enable pnpm
 ### 2. Download and build
 
 ```sh
-git clone <this repository's URL> openchieng
-cd openchieng
+git clone https://github.com/montycheese/openqian.git
+cd openqian
 nvm use            # if you use nvm; reads .nvmrc
 pnpm install
 pnpm build
@@ -80,17 +80,17 @@ If a brokerage has no positions export, create a **holdings** account and add ea
 
 ## Your data and privacy
 
-- Everything is stored in one file, `openchieng.db`:
+- Everything is stored in one file, `openqian.db`:
 
   | OS | Location |
   |---|---|
-  | macOS | `~/Library/Application Support/OpenChieng` |
-  | Linux | `$XDG_DATA_HOME/openchieng` (default `~/.local/share/openchieng`) |
-  | Windows | `%APPDATA%\OpenChieng` |
+  | macOS | `~/Library/Application Support/OpenQian` |
+  | Linux | `$XDG_DATA_HOME/openqian` (default `~/.local/share/openqian`) |
+  | Windows | `%APPDATA%\OpenQian` |
 
   Set `DATA_DIR=/some/folder` before `pnpm start` to use a different location.
 - **Back up** by copying that file while the app is stopped. Avoid cloud-synced folders unless you're comfortable with that.
-- **Exchange API keys** are encrypted with a key kept in your operating system's keychain. Where no keychain is available (e.g. some Linux servers), set `OPENCHIENG_PASSPHRASE` to derive the key from a passphrase instead.
+- **Exchange API keys** are encrypted with a key kept in your operating system's keychain. Where no keychain is available (e.g. some Linux servers), set `OPENQIAN_PASSPHRASE` to derive the key from a passphrase instead.
 - **What goes over the internet:** only requests you trigger by refreshing — market prices (Yahoo Finance, CoinGecko, Coinbase public data), exchange rates (Frankfurter), your exchanges (with your read-only key), and public blockchain endpoints for wallet balances. Those providers can see what's requested (e.g. which tickers or wallet addresses); none of them receive your net worth or other accounts. Imported files never leave your computer and aren't kept after import.
 - **Private mode** hides numbers from people looking at your screen. It is not encryption — anyone with access to your computer can read the database.
 
@@ -109,7 +109,7 @@ Database changes are applied automatically when the app starts.
 
 - **`pnpm: command not found`** — run `corepack enable pnpm`.
 - **Build errors mentioning Node** — check `node -v` is 24 or newer.
-- **"Couldn't access the OS keychain"** — set `OPENCHIENG_PASSPHRASE` and restart.
+- **"Couldn't access the OS keychain"** — set `OPENQIAN_PASSPHRASE` and restart.
 - **Prices show `$0` with a "rate limit" note** — the free price services limit how often you can ask; wait a minute and click Refresh all again. Last known prices are kept in the meantime.
 - **A wallet chain fails to load** — public endpoints are occasionally down. Add your own endpoint in *Settings → Blockchain endpoints* (e.g. a free key from an RPC provider).
 - **An import finds nothing** — make sure it's a positions/holdings export (not transactions), or a Quicken `.qfx` for bank balances.
@@ -117,13 +117,13 @@ Database changes are applied automatically when the app starts.
 
 ## Set up with an AI agent
 
-AI coding agents (Claude Code, Cursor, Codex, and others) can install and set up OpenChieng for you. This repository includes [`AGENTS.md`](AGENTS.md) with step-by-step instructions written for agents.
+AI coding agents (Claude Code, Cursor, Codex, and others) can install and set up OpenQian for you. This repository includes [`AGENTS.md`](AGENTS.md) with step-by-step instructions written for agents.
 
 Open the project folder in your agent and ask something like:
 
-> Help me set up OpenChieng on this computer. Follow the "Helping a user set up OpenChieng" section in AGENTS.md: check prerequisites, install, build, and start it, then walk me through the first-time setup.
+> Help me set up OpenQian on this computer. Follow the "Helping a user set up OpenQian" section in AGENTS.md: check prerequisites, install, build, and start it, then walk me through the first-time setup.
 
-The agent can install dependencies, run and verify the app, explain where to find your bank's download buttons, and fix problems. **Never give an agent your bank passwords, exchange API secrets, or seed phrases** — enter those into OpenChieng yourself.
+The agent can install dependencies, run and verify the app, explain where to find your bank's download buttons, and fix problems. **Never give an agent your bank passwords, exchange API secrets, or seed phrases** — enter those into OpenQian yourself.
 
 ## Development
 

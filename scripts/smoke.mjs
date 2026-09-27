@@ -14,7 +14,7 @@ const port = await new Promise((resolve) => {
     srv.close(() => resolve(port));
   });
 });
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openchieng-smoke-"));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "openqian-smoke-"));
 const base = `http://127.0.0.1:${port}`;
 const server = spawn("node_modules/.bin/next", ["start", "-H", "127.0.0.1", "--port", String(port)], {
   env: { ...process.env, DATA_DIR: dataDir },
@@ -52,7 +52,7 @@ try {
   }
   // First request creates and migrates the database; then add sample data.
   const empty = await Promise.all(["/", "/settings"].map((r) => get(r)));
-  const db = new Database(path.join(dataDir, "openchieng.db"));
+  const db = new Database(path.join(dataDir, "openqian.db"));
   const cat = (name) => db.prepare("select id from categories where name = ?").get(name).id;
   const addAccount = db.prepare(
     "insert into accounts (id, name, category_id, kind, currency) values (?, ?, ?, ?, ?)",
@@ -120,7 +120,7 @@ try {
     ...(await Promise.all(charts.map(([r, text]) => get(r, text)))),
   ];
   // Private mode is read from a cookie on the server so pages render already masked.
-  const privateHome = await get("/", "data-private", { cookie: "oc-private=1" });
+  const privateHome = await get("/", "data-private", { cookie: "openqian-private=1" });
   results.push({ route: "/ (private mode)", problem: privateHome.problem });
   const missing = await get("/accounts/does-not-exist");
   results.push({ route: missing.route, problem: missing.problem === "HTTP 404" ? null : missing.problem ?? "expected 404" });

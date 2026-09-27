@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, type DB } from "@/lib/db";
 import { toPositions } from "@/lib/connections/exchange";
 
-process.env.OPENCHIENG_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
+process.env.OPENQIAN_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
 
 let db: DB;
 const fakeExchange = {

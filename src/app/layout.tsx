@@ -6,7 +6,7 @@ import { PRIVATE_COOKIE } from "@/lib/privacy";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OpenChieng",
+  title: "OpenQian",
   description: "Local, view-only net worth and portfolio tracker",
 };
 
@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <header className="border-b border-border bg-surface">
             <nav className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-1 px-2 py-1 text-sm sm:px-4">
               <Link href="/" className="mr-auto px-2 py-2 text-base font-semibold">
-                OpenChieng
+                OpenQian
               </Link>
               <Link href="/accounts/new" className="rounded-md px-2 py-2 text-muted hover:text-foreground">
                 Add

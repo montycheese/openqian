@@ -3,7 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { dataDir } from "@/lib/paths";
+import { adoptLegacyData, DB_FILE, dataDir, legacyDataDir } from "@/lib/paths";
 import * as schema from "./schema";
 
 export type DB = BetterSQLite3Database<typeof schema>;
@@ -50,7 +50,7 @@ function seed(db: DB) {
     .run();
 }
 
-const globalForDb = globalThis as unknown as { openchiengDbV2?: { db: DB; migrations: string } };
+const globalForDb = globalThis as unknown as { openqianDb?: { db: DB; migrations: string } };
 
 /**
  * Shared connection, reused across dev hot reloads. Because the connection
@@ -58,11 +58,12 @@ const globalForDb = globalThis as unknown as { openchiengDbV2?: { db: DB; migrat
  * running are applied on the next access instead of only at startup.
  */
 export function getDb(): DB {
-  const cached = globalForDb.openchiengDbV2;
+  const cached = globalForDb.openqianDb;
   if (!cached) {
     const migrations = migrationsVersion();
-    const db = openDatabase(path.join(dataDir(), "openchieng.db"));
-    globalForDb.openchiengDbV2 = { db, migrations };
+    adoptLegacyData(dataDir(), legacyDataDir());
+    const db = openDatabase(path.join(dataDir(), DB_FILE));
+    globalForDb.openqianDb = { db, migrations };
     return db;
   }
   if (process.env.NODE_ENV !== "production") {

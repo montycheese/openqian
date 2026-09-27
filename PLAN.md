@@ -1,6 +1,6 @@
-# OpenChieng — Plan
+# OpenQian — Plan
 
-OpenChieng is a self-hosted, view-only net worth and portfolio tracker (in the spirit of Kubera) that runs entirely on your own machine. Intended to be open-sourced so anyone can run it with their own provider credentials.
+OpenQian is a self-hosted, view-only net worth and portfolio tracker (in the spirit of Kubera) that runs entirely on your own machine. Intended to be open-sourced so anyone can run it with their own provider credentials.
 
 ## Principles
 
@@ -187,11 +187,11 @@ General importer rules:
 
 | Topic | Decision |
 |---|---|
-| Name | **OpenChieng** |
+| Name | **OpenQian** |
 | License | MIT |
 | Package manager | pnpm |
 | Master key storage | OS keychain via a cross-platform library (`@napi-rs/keyring`); fall back to a startup passphrase when no keychain is available |
-| Data location | Per-user app-data dir (e.g. `~/Library/Application Support/OpenChieng` on macOS), overridable with `DATA_DIR` |
+| Data location | Per-user app-data dir (e.g. `~/Library/Application Support/OpenQian` on macOS), overridable with `DATA_DIR` |
 | Snapshot granularity | One per day; the latest refresh of the day replaces earlier ones |
 | Duplicate accounts across providers | Accounts can be linked; the user picks which source counts toward net worth (minimum: hide one) |
 | Cost | Core must be free to run; no paid services required |

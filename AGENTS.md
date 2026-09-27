@@ -8,11 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# OpenChieng — guide for AI agents
+# OpenQian — guide for AI agents
 
-OpenChieng is a **local-only, view-only** net worth and portfolio tracker. It runs on the user's own machine (`127.0.0.1`), stores everything in one SQLite file, never moves money, and must stay **free to run** (no paid APIs, no aggregators by default). Read `README.md` for the user-facing picture and `PLAN.md` for scope and design decisions.
+OpenQian is a **local-only, view-only** net worth and portfolio tracker. It runs on the user's own machine (`127.0.0.1`), stores everything in one SQLite file, never moves money, and must stay **free to run** (no paid APIs, no aggregators by default). Read `README.md` for the user-facing picture and `PLAN.md` for scope and design decisions.
 
-If you are here to **help a user install and set up OpenChieng** (not to change code), skip to [Helping a user set up OpenChieng](#helping-a-user-set-up-openchieng).
+If you are here to **help a user install and set up OpenQian** (not to change code), skip to [Helping a user set up OpenQian](#helping-a-user-set-up-openqian).
 
 ## Commands
 
@@ -73,7 +73,7 @@ scripts/smoke.mjs        Page smoke test used by pnpm verify.
 - Never print, log, or send secrets; they're encrypted at rest and only decrypted to call the provider.
 - Keep the server bound to `127.0.0.1`.
 
-## Helping a user set up OpenChieng
+## Helping a user set up OpenQian
 
 Walk the user through these steps, running commands for them where you can and explaining what each does. Don't ask for or handle their bank passwords, API secrets, or account numbers — they enter those in the app themselves.
 

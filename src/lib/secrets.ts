@@ -3,7 +3,9 @@ import { eq } from "drizzle-orm";
 import type { DB } from "@/lib/db";
 import { secrets, settings } from "@/lib/db/schema";
 
-const KEYRING_SERVICE = "OpenChieng";
+const KEYRING_SERVICE = "OpenQian";
+// Keychain service used before the project was renamed; its key is copied over once.
+const LEGACY_KEYRING_SERVICE = "OpenChieng";
 const KEYRING_ACCOUNT = "master-key";
 const FORMAT = "v1";
 
@@ -28,11 +30,11 @@ let cachedKey: Buffer | undefined;
 /**
  * The master key lives in the OS keychain (macOS Keychain, Windows Credential
  * Manager, Secret Service on Linux). Where no keychain is available, it is
- * derived from the OPENCHIENG_PASSPHRASE environment variable instead.
+ * derived from the OPENQIAN_PASSPHRASE environment variable instead.
  */
 export async function getMasterKey(db: DB): Promise<Buffer> {
   if (cachedKey) return cachedKey;
-  const passphrase = process.env.OPENCHIENG_PASSPHRASE;
+  const passphrase = process.env.OPENQIAN_PASSPHRASE;
   if (passphrase) {
     cachedKey = deriveKey(db, passphrase);
     return cachedKey;
@@ -42,7 +44,8 @@ export async function getMasterKey(db: DB): Promise<Buffer> {
     const entry = new Entry(KEYRING_SERVICE, KEYRING_ACCOUNT);
     let stored = entry.getPassword();
     if (!stored) {
-      stored = crypto.randomBytes(32).toString("base64");
+      // Reuse a pre-rename key so existing encrypted secrets stay readable.
+      stored = new Entry(LEGACY_KEYRING_SERVICE, KEYRING_ACCOUNT).getPassword() ?? crypto.randomBytes(32).toString("base64");
       entry.setPassword(stored);
     }
     cachedKey = Buffer.from(stored, "base64");
@@ -50,7 +53,7 @@ export async function getMasterKey(db: DB): Promise<Buffer> {
   } catch (err) {
     throw new Error(
       "Could not access the OS keychain to load the encryption key. " +
-        "Set OPENCHIENG_PASSPHRASE to use a passphrase instead.",
+        "Set OPENQIAN_PASSPHRASE to use a passphrase instead.",
       { cause: err },
     );
   }

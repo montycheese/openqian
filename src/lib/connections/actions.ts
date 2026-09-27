@@ -24,7 +24,7 @@ const secretName = (connectionId: string) => `connection:${connectionId}`;
 /** Errors ccxt raises for exchange responses; anything else is a local failure. */
 const CCXT_ERROR = /^(BaseError|ExchangeError|BadRequest|BadResponse|NotSupported|OperationFailed|InvalidNonce|ArgumentsRequired|RateLimitExceeded|DDoSProtection|OnMaintenance|InsufficientFunds|InvalidOrder|OrderNotFound|AccountSuspended|AccountNotEnabled|BadSymbol)$/;
 
-/** Raised by OpenChieng itself; its message is already user-facing. */
+/** Raised by OpenQian itself; its message is already user-facing. */
 class ConnectionError extends Error {}
 
 function describeError(err: unknown, { adding = false } = {}): string {
@@ -82,7 +82,7 @@ export async function addConnection(_: ConnectionState, formData: FormData): Pro
     const excess = await excessPermissions(exchangeId, exchange);
     if (excess && excess.length > 0) {
       return {
-        error: `This key can ${excess.join(" and ")}. OpenChieng only needs to view balances — create a key with "View" permission only.`,
+        error: `This key can ${excess.join(" and ")}. OpenQian only needs to view balances — create a key with "View" permission only.`,
       };
     }
     result = await fetchPositions(exchange);

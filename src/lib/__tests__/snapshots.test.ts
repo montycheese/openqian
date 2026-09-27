@@ -5,7 +5,7 @@ import { accounts, categories, fxRates, holdings, settings, snapshotAccounts, sn
 import { getAccountHistory, getNetWorthHistory } from "@/lib/history";
 import { backfillSnapshots, localDate, recordSnapshot, takeSnapshot } from "@/lib/snapshots";
 
-process.env.OPENCHIENG_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
+process.env.OPENQIAN_PASSPHRASE = "test-passphrase"; // keep tests out of the real keychain
 
 vi.mock("@/lib/db", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/db")>()), getDb: () => db }));
 vi.mock("@/lib/snapshots", async (importOriginal) => {

@@ -80,7 +80,7 @@ export default async function ConnectionsPage() {
               keys</b> → <b>Create API key</b>.
             </li>
             <li>
-              Under permissions, allow <b>View</b> only. Leave Trade and Transfer unchecked — OpenChieng refuses keys that
+              Under permissions, allow <b>View</b> only. Leave Trade and Transfer unchecked — OpenQian refuses keys that
               can trade or move funds.
             </li>
             <li>
