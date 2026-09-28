@@ -1,6 +1,6 @@
 # OpenQian — Plan
 
-OpenQian is a self-hosted, view-only net worth and portfolio tracker (in the spirit of Kubera) that runs entirely on your own machine. Intended to be open-sourced so anyone can run it with their own provider credentials.
+OpenQian is a self-hosted, view-only net worth and portfolio tracker that runs entirely on your own machine. Intended to be open-sourced so anyone can run it with their own provider credentials.
 
 ## Principles
 
@@ -18,7 +18,7 @@ OpenQian is a self-hosted, view-only net worth and portfolio tracker (in the spi
 
 1. **Net worth dashboard** — total assets, total debts, net worth, change since last snapshot.
 2. **Assets & debts sheets** — grouped by user-editable categories (Cash, Investments, Retirement, Crypto, Private Equity, Real Estate, Debts, …) with account → holdings drill-down.
-3. **Sources manager** — per account: source (import / API / manual), last updated, status, and a staleness indicator (e.g. "updated 34 days ago") so file-based accounts get a nudge. "Refresh all" for API sources and prices.
+3. **Sources manager** — per account: source (import / API / manual), last updated, status, and a staleness indicator (e.g. "updated 34 days ago") so file-based accounts get a nudge. "Refresh all" for API sources and prices. *(Source, as-of date, and Refresh all are built; the staleness nudge is not yet.)*
 4. **File import (OFX/QFX + CSV)** — drag-and-drop a bank or brokerage export; auto-detect format; preview changes; map to an existing account (matched by account number / last 4) or create one; confirm. Balances from bank files, positions from brokerage files.
 5. **Manual assets**
    - *Market-priced:* ticker + quantity, price fetched automatically.
@@ -171,10 +171,20 @@ General importer rules:
 3. ✅ **Crypto exchanges** *(pulled forward)* — ccxt connections (Coinbase, Kraken, Gemini, Binance.US) with encrypted keys, Coinbase key-permission check (refuses trade/transfer keys), balances priced in USD from the exchange's own markets, per-connection and "refresh all".
 4. ✅ **Prices & FX** — Yahoo Finance (stocks/ETFs/funds) and CoinGecko (crypto) quotes cached in `prices`; manual and imported holdings are repriced on refresh (exchange-connected accounts use their exchange's prices). Frankfurter v2 FX rates with inverse/cross conversion and manual overrides in Settings. One "Refresh all" button runs connections → prices → FX.
 5. ✅ **Snapshots & history charts** — one snapshot per local day (latest capture wins) after every change, storing per-account values and the FX rates used; backfill from dated valuations (partial days flagged and left off the net worth chart); Recharts net worth and per-account charts with 1M–All ranges.
-5b. **On-chain wallets** *(added to scope)* — watch-only addresses read from free public endpoints (see "On-chain wallets" below).
+5b. ✅ **On-chain wallets** *(added to scope)* — watch-only addresses read from free public endpoints (see "On-chain wallets" below): Ethereum, Base, Arbitrum (Multicall3, curated tokens), Solana (SOL + SPL/Token-2022), Bitcoin (Esplora). Network shown on every holding.
+5c. ✅ **Private mode** — eye toggle (and Settings switch) that masks every amount with `*****`; cookie-backed so pages render masked server-side.
+5d. ✅ **Design: pixel Jade Treasury** — early-2000s game-inventory look (bevelled lacquer/gold frames, pixel sprites, inventory slots with stack counts, share-of-assets grades), bundled OFL pixel fonts, `pnpm demo` for previews and README screenshots.
 6. **Schwab Trader API adapter.**
 7. ✅ **OFX/QFX import** *(pulled forward)* — bank and credit card balances (SGML and XML OFX) into value accounts, brokerage positions from `INVPOSLIST`. Synthetic Chase/Wells Fargo-style fixtures; needs a real download to confirm.
 8. v2 features; optional aggregator adapters as community contributions.
+
+### Next up
+
+1. Staleness nudge for file-imported accounts (MVP item 3).
+2. Cost basis and unrealized gains (already captured by imports, not yet shown).
+3. Encrypted backup / export.
+4. Asset allocation views.
+5. Schwab Trader API (step 6) or wallet extensions (custom token contracts, more EVM chains, Bitcoin xpub, staked SOL), depending on need.
 
 ## Open-source readiness
 
@@ -187,13 +197,13 @@ General importer rules:
 
 | Topic | Decision |
 |---|---|
-| Name | **OpenQian** |
+| Name | **OpenQian** (钱 *qián*, money; renamed from OpenChieng before release) |
 | License | MIT |
 | Package manager | pnpm |
 | Master key storage | OS keychain via a cross-platform library (`@napi-rs/keyring`); fall back to a startup passphrase when no keychain is available |
 | Data location | Per-user app-data dir (e.g. `~/Library/Application Support/OpenQian` on macOS), overridable with `DATA_DIR` |
 | Snapshot granularity | One per day; the latest refresh of the day replaces earlier ones |
-| Duplicate accounts across providers | Accounts can be linked; the user picks which source counts toward net worth (minimum: hide one) |
+| Duplicate accounts across providers | Not built — without aggregators duplicates are rare; hide or exclude one account instead |
 | Cost | Core must be free to run; no paid services required |
 | Third-party aggregators | Not used by default (they hold users' credentials and data; possible as optional adapters) |
 | Stock price source | Pluggable; default `yahoo-finance2` (no key), Finnhub / Alpha Vantage as alternatives |
