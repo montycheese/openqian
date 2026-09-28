@@ -27,7 +27,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const milestone = nextMilestone(nw.netWorth);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[310px_minmax(0,1fr)] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[330px_minmax(0,1fr)] lg:items-start">
       <aside aria-label="Net worth" className="card flex flex-col gap-4 p-5">
         <div className="flex items-center gap-4 border-b border-[#d8c49a] pb-4 lg:flex-col lg:text-center">
           <Ingot size={84} />
@@ -36,20 +36,20 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
               Net worth <span className="brush text-lacquer">净资产</span>
             </p>
             <p className="num text-2xl sm:text-3xl">
-              <Sensitive>{formatMoney(nw.netWorth, cur)}</Sensitive>
+              <Sensitive>{formatMoney(nw.netWorth, cur, { whole: true })}</Sensitive>
             </p>
           </div>
         </div>
         <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-y-1.5 text-sm">
           <dt className="text-muted">Assets</dt>
           <dd className="num font-semibold">
-            <Sensitive>{formatMoney(nw.assets, cur)}</Sensitive>
+            <Sensitive>{formatMoney(nw.assets, cur, { whole: true })}</Sensitive>
           </dd>
           <dt className="text-muted">
             Debts <span className="brush text-lacquer">债务</span>
           </dt>
           <dd className="num font-semibold text-negative">
-            <Sensitive>{formatMoney(-nw.debts, cur)}</Sensitive>
+            <Sensitive>{formatMoney(-nw.debts, cur, { whole: true })}</Sensitive>
           </dd>
         </dl>
         {milestone && (

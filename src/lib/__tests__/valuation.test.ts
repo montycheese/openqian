@@ -129,3 +129,12 @@ describe("summarizeNetWorth", () => {
     expect(summary.base).toBe(200);
   });
 });
+
+describe("formatMoney", () => {
+  it("drops cents for headline figures and never prints negative zero", async () => {
+    const { formatMoney } = await import("@/lib/money");
+    expect(formatMoney(1_310_230.21, "USD", { whole: true })).toBe("$1,310,230");
+    expect(formatMoney(-0, "USD")).toBe("$0.00");
+    expect(formatMoney(12.5, "USD")).toBe("$12.50");
+  });
+});

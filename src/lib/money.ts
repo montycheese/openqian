@@ -8,13 +8,15 @@ export function currencyOptions(): string[] {
   return [...COMMON, ...all.filter((c) => !COMMON.includes(c))];
 }
 
-export function formatMoney(amount: number, currency: string, opts: { compact?: boolean } = {}): string {
+/** `whole` drops cents (for headline figures); negative zero prints as zero. */
+export function formatMoney(amount: number, currency: string, opts: { compact?: boolean; whole?: boolean } = {}): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
     notation: opts.compact ? "compact" : "standard",
-    maximumFractionDigits: opts.compact ? 1 : 2,
-  }).format(amount);
+    maximumFractionDigits: opts.compact ? 1 : opts.whole ? 0 : 2,
+    minimumFractionDigits: opts.whole ? 0 : undefined,
+  }).format(amount === 0 ? 0 : amount);
 }
 
 export function formatNumber(n: number, maxFractionDigits = 6): string {

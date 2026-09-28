@@ -135,10 +135,10 @@ export function MilestoneCoins({ progress, target, remaining, currency }: { prog
   const filled = Math.max(0, Math.min(10, Math.floor(progress * 10)));
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <span className="font-bold whitespace-nowrap text-lacquer">Next milestone</span>
         <span className="num text-sm text-muted">
-          <Sensitive>{formatMoney(target, currency)}</Sensitive>
+          <Sensitive>{formatMoney(target, currency, { whole: true })}</Sensitive>
         </span>
       </div>
       <div
@@ -155,7 +155,7 @@ export function MilestoneCoins({ progress, target, remaining, currency }: { prog
       </div>
       <p className="mt-1 text-sm text-muted">
         <span className="num">
-          <Sensitive>{formatMoney(remaining, currency)}</Sensitive>
+          <Sensitive>{formatMoney(remaining, currency, { whole: true })}</Sensitive>
         </span>{" "}
         to go
       </p>
